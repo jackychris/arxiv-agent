@@ -1,0 +1,11 @@
+python-dotenv
+openai
+arxiv
+fastapi
+uvicorn
+mcp
+markitdown
+tavily-python
+a2a-sdk[http-server]
+protobuf<6
+httpx

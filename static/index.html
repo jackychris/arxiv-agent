@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>arXiv Research Agent</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px;
+    }
+
+    h1 { font-size: 1.6rem; font-weight: 600; margin-bottom: 32px; color: #111; }
+
+    .search-box { width: 100%; max-width: 720px; display: flex; gap: 8px; }
+
+    textarea {
+      flex: 1; padding: 12px 14px; font-size: 0.95rem;
+      border: 1px solid #d0d0d0; border-radius: 8px;
+      resize: vertical; min-height: 80px; outline: none;
+      line-height: 1.5; background: #fff;
+    }
+    textarea:focus { border-color: #555; }
+
+    button {
+      padding: 0 20px; font-size: 0.9rem; font-weight: 500;
+      background: #1a1a1a; color: #fff; border: none;
+      border-radius: 8px; cursor: pointer; align-self: flex-end; height: 40px;
+    }
+    button:disabled { background: #999; cursor: not-allowed; }
+
+    #workspace { width: 100%; max-width: 1180px; margin-top: 24px; display: none; flex-direction: column; gap: 12px; }
+
+    .task-board {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px; align-items: start; width: 100%;
+    }
+
+    .task-card {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;
+      min-width: 0;
+    }
+    .task-header {
+      padding: 10px 16px; background: #f9f9f9; border-bottom: 1px solid #eee;
+      font-size: 0.82rem; font-weight: 600; color: #444;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .task-status { font-weight: 400; color: #888; font-size: 0.78rem; }
+    .task-status.done { color: #2a9d2a; }
+    .task-steps {
+      padding: 10px 16px; display: flex; flex-direction: column; gap: 6px;
+      max-height: 62vh; overflow-y: auto;
+    }
+    .step {
+      font-size: 0.8rem; color: #555; line-height: 1.5;
+      padding: 6px 10px; background: #f5f5f5; border-radius: 6px;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .observation {
+      font-size: 0.78rem; color: #2c5282; line-height: 1.5;
+      padding: 6px 10px; background: #ebf4ff; border-radius: 6px;
+      border-left: 3px solid #90cdf4;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .event-title {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      font-weight: 600; color: #333; margin-bottom: 4px;
+    }
+    .event-title .muted { color: #777; font-weight: 400; }
+    .event-pill {
+      display: inline-flex; align-items: center; max-width: 100%;
+      padding: 1px 6px; border-radius: 999px; background: #e8e8e8;
+      color: #333; font-size: 0.72rem; font-weight: 600;
+    }
+    .event-pill.is-error { background: #ffe4e4; color: #a40000; border: 0; padding: 1px 6px; }
+    .event-pre {
+      margin-top: 5px; padding: 6px 8px; border-radius: 5px;
+      background: rgba(255,255,255,0.72); color: #333;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.72rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word;
+      max-height: 160px; overflow: auto;
+    }
+    .event-message { color: inherit; white-space: pre-wrap; word-break: break-word; }
+    .task-result {
+      margin: 8px 0 4px; padding: 12px 14px;
+      background: #f0faf0; border-radius: 6px; border-left: 3px solid #68d391;
+      font-size: 0.82rem; line-height: 1.6; color: #1a1a1a;
+    }
+    .task-result h1, .task-result h2, .task-result h3 { margin: 0.8em 0 0.3em; font-weight: 600; }
+    .task-result p { margin: 0.4em 0; }
+    .task-result ul, .task-result ol { padding-left: 1.2em; margin: 0.4em 0; }
+    .task-result li { margin: 0.2em 0; }
+    .task-result strong { font-weight: 600; }
+
+    .synth-notice {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+      padding: 12px 16px; font-size: 0.85rem; color: #888; text-align: center;
+    }
+
+    .final-card {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+      padding: 24px 28px; line-height: 1.7; font-size: 0.95rem;
+    }
+    .final-card h1, .final-card h2, .final-card h3 { margin: 1.2em 0 0.4em; font-weight: 600; }
+    .final-card h1 { font-size: 1.3rem; }
+    .final-card h2 { font-size: 1.1rem; }
+    .final-card h3 { font-size: 1rem; }
+    .final-card p { margin: 0.6em 0; }
+    .final-card ul, .final-card ol { padding-left: 1.4em; margin: 0.6em 0; }
+    .final-card li { margin: 0.3em 0; }
+    .final-card table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.88rem; }
+    .final-card th, .final-card td { border: 1px solid #ddd; padding: 7px 10px; text-align: left; }
+    .final-card th { background: #f5f5f5; font-weight: 600; }
+    .final-card code { background: #f0f0f0; padding: 2px 5px; border-radius: 4px; font-size: 0.88em; }
+    .final-card pre { background: #f0f0f0; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 0.8em 0; }
+    .final-card pre code { background: none; padding: 0; }
+    .final-card strong { font-weight: 600; }
+    .final-card hr { border: none; border-top: 1px solid #e0e0e0; margin: 1.2em 0; }
+
+    .error { color: #c00; font-size: 0.88rem; padding: 12px 16px; background: #fff0f0; border-radius: 8px; border: 1px solid #fcc; }
+
+    @media (max-width: 640px) {
+      body { padding: 32px 12px; }
+      .search-box { flex-direction: column; }
+      button { align-self: stretch; }
+      .task-board { grid-template-columns: 1fr; }
+      .task-steps { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1>arXiv Research Agent</h1>
+
+  <div class="search-box">
+    <textarea id="query" placeholder="Ask a research question, e.g. Compare RAG and fine-tuning approaches for adapting LLMs"></textarea>
+    <button id="btn" onclick="submit()">Search</button>
+  </div>
+
+  <div id="workspace"></div>
+
+  <script>
+    let es = null;
+    let done = false;
+    const taskCards = {};
+
+    function submit() {
+      const query = document.getElementById("query").value.trim();
+      if (!query) return;
+
+      if (es) { es.close(); es = null; }
+      done = false;
+
+      const btn = document.getElementById("btn");
+      const workspace = document.getElementById("workspace");
+
+      btn.disabled = true;
+      workspace.style.display = "flex";
+      workspace.innerHTML = '<div class="synth-notice">Planning tasks...</div>';
+      Object.keys(taskCards).forEach(k => delete taskCards[k]);
+
+      es = new EventSource("/stream?query=" + encodeURIComponent(query));
+
+      es.onmessage = (e) => {
+        const event = JSON.parse(e.data);
+        handleEvent(event, workspace, btn);
+      };
+
+      es.onerror = () => {
+        if (done) return;
+        workspace.innerHTML += '<div class="error">Connection error.</div>';
+        btn.disabled = false;
+        es.close();
+      };
+    }
+
+    function handleEvent(event, workspace, btn) {
+      if (event.type === "plan") {
+        workspace.innerHTML = "";
+        const board = document.createElement("div");
+        board.className = "task-board";
+        board.id = "task-board";
+        workspace.appendChild(board);
+        event.tasks.forEach(t => {
+          const card = document.createElement("div");
+          card.className = "task-card";
+          const header = document.createElement("div");
+          header.className = "task-header";
+          const title = document.createElement("span");
+          title.textContent = `Task ${t.id}: ${t.mission}`;
+          const status = document.createElement("span");
+          status.className = "task-status";
+          status.id = "status-" + t.id;
+          status.textContent = "running...";
+          header.appendChild(title);
+          header.appendChild(status);
+          const steps = document.createElement("div");
+          steps.className = "task-steps";
+          steps.id = "steps-" + t.id;
+          card.appendChild(header);
+          card.appendChild(steps);
+          board.appendChild(card);
+          taskCards[t.id] = true;
+        });
+
+      } else if (event.type === "step" || event.type === "observation") {
+        const stepsEl = document.getElementById("steps-" + event.task_id);
+        if (stepsEl) {
+          const el = renderProgressEvent(event);
+          stepsEl.appendChild(el);
+          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+
+      } else if (event.type === "task_result") {
+        const stepsEl = document.getElementById("steps-" + event.task_id);
+        if (stepsEl) {
+          const el = document.createElement("div");
+          el.className = event.error ? "task-result has-error" : "task-result";
+          if (event.error) {
+            el.appendChild(renderErrorSummary(event.error, event.content));
+          } else {
+            el.innerHTML = marked.parse(event.content || "");
+          }
+          stepsEl.appendChild(el);
+          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+
+      } else if (event.type === "task_done") {
+        const statusEl = document.getElementById("status-" + event.task_id);
+        if (statusEl) {
+          statusEl.textContent = "done ✓";
+          statusEl.className = "task-status done";
+        }
+
+      } else if (event.type === "synthesizing") {
+        const notice = document.createElement("div");
+        notice.className = "synth-notice";
+        notice.textContent = "Synthesizing results...";
+        workspace.appendChild(notice);
+
+      } else if (event.type === "final") {
+        done = true;
+        const oldNotice = workspace.querySelector(".synth-notice");
+        if (oldNotice) oldNotice.remove();
+        const card = document.createElement("div");
+        card.className = "final-card";
+        card.innerHTML = marked.parse(event.content);
+        workspace.appendChild(card);
+        card.scrollIntoView({ behavior: "smooth" });
+        btn.disabled = false;
+        es.close();
+
+      } else if (event.type === "error") {
+        const el = document.createElement("div");
+        el.className = "error";
+        el.appendChild(renderErrorSummary(event.error, event.content));
+        workspace.appendChild(el);
+        btn.disabled = false;
+        es.close();
+      }
+    }
+
+    function renderProgressEvent(event) {
+      const el = document.createElement("div");
+      el.className = event.type === "observation" ? "observation" : "step";
+
+      if (event.error) {
+        el.appendChild(renderErrorSummary(event.error, event.content));
+        return el;
+      }
+
+      if (event.type === "step") {
+        const data = event.data || {};
+        el.appendChild(renderTitle([
+          { text: `Step ${data.step || ""}`.trim(), className: "event-pill" },
+          { text: data.tool || "tool", className: "event-pill" },
+          { text: data.thought || event.content || "", className: "muted" },
+        ]));
+        if (data.tool_input !== undefined) {
+          el.appendChild(renderPre(data.tool_input));
+        }
+        return el;
+      }
+
+      const data = event.data || {};
+      el.appendChild(renderTitle([
+        { text: data.tool || "observation", className: "event-pill" },
+        { text: data.truncated ? "truncated" : "", className: data.truncated ? "event-pill" : "muted" },
+      ]));
+      const message = document.createElement("div");
+      message.className = "event-message";
+      message.textContent = data.preview || event.content || "";
+      el.appendChild(message);
+      return el;
+    }
+
+    function renderTitle(items) {
+      const title = document.createElement("div");
+      title.className = "event-title";
+      items.filter(item => item.text).forEach(item => {
+        const span = document.createElement("span");
+        span.className = item.className || "";
+        span.textContent = item.text;
+        title.appendChild(span);
+      });
+      return title;
+    }
+
+    function renderPre(value) {
+      const pre = document.createElement("pre");
+      pre.className = "event-pre";
+      pre.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+      return pre;
+    }
+
+    function renderErrorSummary(error, fallback) {
+      const wrap = document.createElement("div");
+      const code = error && error.code ? error.code : "ERROR";
+      const message = error && error.message ? error.message : (fallback || "Unknown error");
+      wrap.appendChild(renderTitle([
+        { text: code, className: "event-pill is-error" },
+        { text: error && error.source ? error.source : "", className: "event-pill" },
+      ]));
+      const msg = document.createElement("div");
+      msg.className = "event-message";
+      msg.textContent = message;
+      wrap.appendChild(msg);
+      if (error && error.details && Object.keys(error.details).length) {
+        wrap.appendChild(renderPre(error.details));
+      }
+      return wrap;
+    }
+
+    document.getElementById("query").addEventListener("keydown", e => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit();
+    });
+  </script>
+</body>
+</html>
