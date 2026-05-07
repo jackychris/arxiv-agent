@@ -1,11 +1,12 @@
 # researcher/agent.py
 import json
+
 import llm
 import memory.long_term as lt
 from config import MAX_STEPS
-from memory.short_term import ShortTermMemory
-from prompts import build_system_prompt, build_memory_hint, TOOL_REFLECT_PROMPT
 from mcp_client import MCPClient
+from memory.short_term import ShortTermMemory
+from prompts import TOOL_REFLECT_PROMPT, build_memory_hint, build_system_prompt
 from researcher.reflection import build_reflection_history
 
 
@@ -35,12 +36,16 @@ class ResearchAgent:
         for step in range(MAX_STEPS):
             remaining = MAX_STEPS - step
             if remaining == 1:
-                step_hint = "1 step remaining. You must now give your final_answer. Do not call any tools."
+                step_hint = (
+                    "1 step remaining. You must now give your final_answer. Do not call any tools."
+                )
             elif remaining == 2:
-                step_hint = "2 steps remaining. This is your last chance to call a tool. Use it wisely."
+                step_hint = (
+                    "2 steps remaining. This is your last chance to call a tool. Use it wisely."
+                )
             else:
                 step_hint = f"{remaining} steps remaining."
-            temp = memory.get() + [{"role": "system", "content": step_hint}]
+            temp = [*memory.get(), {"role": "system", "content": step_hint}]
 
             response = await llm.chat(temp)
             memory.add("assistant", response)
@@ -59,7 +64,7 @@ class ResearchAgent:
                 await self._reflect(query, memory)
                 return data["final_answer"]
 
-            action = data.get("action")
+            action: str = str(data.get("action") or "")
             action_input = data.get("action_input", {})
             if verbose:
                 print(f"Action: {action}")
@@ -70,7 +75,10 @@ class ResearchAgent:
                 print(f"Observation: {observation[:200]}...")
             memory.add("user", f"Observation: {observation}")
 
-        memory.add("system", "You have reached the maximum number of steps. Based on what you have found so far, give your best final_answer now. Do not call any tools.")
+        memory.add(
+            "system",
+            "You have reached the maximum number of steps. Based on what you have found so far, give your best final_answer now. Do not call any tools.",
+        )
         response = await llm.chat(memory.get())
         await self._reflect(query, memory)
         data = parse_response(response)

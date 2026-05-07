@@ -7,7 +7,6 @@ from config import ENABLE_TRACE, TRACE_DIR
 from runtime.storage import JsonlTraceStore, TraceStore
 from schemas import TraceEvent
 
-
 _store: TraceStore = JsonlTraceStore(TRACE_DIR)
 
 
@@ -50,7 +49,7 @@ def record(
     data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     event = TraceEvent(
-        kind=kind,
+        kind=kind,  # type: ignore[arg-type]
         run_id=run_id,
         task_id=task_id,
         step=step,

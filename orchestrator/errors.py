@@ -68,4 +68,6 @@ def failed_text(error: AgentError) -> str:
 
 
 def is_failure_text(text: str) -> bool:
-    return text.startswith("[failed") or text.startswith("[failed:") or text.startswith("[canceled:")
+    return (
+        text.startswith("[failed") or text.startswith("[failed:") or text.startswith("[canceled:")
+    )

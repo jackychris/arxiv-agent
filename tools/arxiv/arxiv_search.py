@@ -1,6 +1,7 @@
 # tools/arxiv/arxiv_search.py
+from datetime import UTC, datetime, timedelta
+
 import arxiv
-from datetime import datetime, timedelta, timezone
 
 from ._rate_limit import arxiv_api_call
 
@@ -15,7 +16,7 @@ async def search_arxiv(
     if author is not None:
         query = f"au:{author} AND {query}" if query else f"au:{author}"
     if days is not None:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         date_str = cutoff.strftime("%Y%m%d%H%M%S")
         query = f"{query} submittedDate:[{date_str} TO 99991231235959]"
         sort_by = arxiv.SortCriterion.SubmittedDate

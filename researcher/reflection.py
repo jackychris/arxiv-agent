@@ -2,12 +2,11 @@ import json
 
 from memory.short_term import ShortTermMemory
 
-
 _OBS_PREFIX = "Observation:"
 
 
 def _compact_observation(content: str) -> str:
-    raw = content[len(_OBS_PREFIX):].strip()
+    raw = content[len(_OBS_PREFIX) :].strip()
     try:
         envelope = json.loads(raw)
     except json.JSONDecodeError:

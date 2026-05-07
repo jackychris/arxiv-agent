@@ -3,14 +3,15 @@ import asyncio
 import json
 import os
 from contextlib import AsyncExitStack
+
+import mcp.types as types
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
-import mcp.types as types
 
 from config import MCP_TOOL_TIMEOUT
-from runtime.policy import DEFAULT_TOOL_RETRY_POLICY, RetryPolicy, backoff_seconds, should_retry
 from runtime import tool_cache
+from runtime.policy import DEFAULT_TOOL_RETRY_POLICY, RetryPolicy, backoff_seconds, should_retry
 from schemas import ErrorEnvelope, ToolResultEnvelope
 
 
@@ -27,7 +28,7 @@ def tool_result(
     error: dict | None = None,
     meta: dict | None = None,
 ) -> dict:
-    return ToolResultEnvelope(ok=ok, tool=tool, data=data, error=error, meta=meta or {}).to_dict()
+    return ToolResultEnvelope(ok=ok, tool=tool, data=data, error=error, meta=meta or {}).to_dict()  # type: ignore[arg-type]
 
 
 def tool_error(
@@ -119,7 +120,9 @@ class MCPClient:
             result = await session.list_tools()
             for tool in result.tools:
                 if tool.name in self._tool_to_session:
-                    raise RuntimeError(f"Tool name conflict: {tool.name!r} is registered by multiple servers")
+                    raise RuntimeError(
+                        f"Tool name conflict: {tool.name!r} is registered by multiple servers"
+                    )
                 self._tool_to_session[tool.name] = session
                 self._tool_schemas.append(tool)
         return self
@@ -136,7 +139,9 @@ class MCPClient:
             required = schema.get("required", [])
             for param, info in props.items():
                 req = "required" if param in required else "optional"
-                lines.append(f"  - {param} ({info.get('type', 'any')}, {req}): {info.get('description', '')}")
+                lines.append(
+                    f"  - {param} ({info.get('type', 'any')}, {req}): {info.get('description', '')}"
+                )
         return "\n".join(lines)
 
     async def execute_tool(
@@ -147,12 +152,14 @@ class MCPClient:
         **kwargs,
     ) -> str:
         if name not in self._tool_to_session:
-            return encode_tool_result(tool_error(
-                name,
-                "UNKNOWN_TOOL",
-                f"Unknown tool: {name!r}. Available: {list(self._tool_to_session.keys())}",
-                recoverable=False,
-            ))
+            return encode_tool_result(
+                tool_error(
+                    name,
+                    "UNKNOWN_TOOL",
+                    f"Unknown tool: {name!r}. Available: {list(self._tool_to_session.keys())}",
+                    recoverable=False,
+                )
+            )
 
         cached = tool_cache.get(name, kwargs)
         if cached is not None:
@@ -161,7 +168,9 @@ class MCPClient:
         session = self._tool_to_session[name]
         for attempt in range(1, retry_policy.max_attempts + 1):
             try:
-                result = await asyncio.wait_for(session.call_tool(name, kwargs), timeout=MCP_TOOL_TIMEOUT)
+                result = await asyncio.wait_for(
+                    session.call_tool(name, kwargs), timeout=MCP_TOOL_TIMEOUT
+                )
             except Exception as e:
                 envelope = tool_error(
                     name,
@@ -183,13 +192,15 @@ class MCPClient:
                 tool_cache.put(name, kwargs, result_str)
             return result_str
 
-        return encode_tool_result(tool_error(
-            name,
-            "MCP_TOOL_TIMEOUT",
-            "Tool retry policy exhausted without a result",
-            recoverable=True,
-            details={"max_attempts": retry_policy.max_attempts},
-        ))
+        return encode_tool_result(
+            tool_error(
+                name,
+                "MCP_TOOL_TIMEOUT",
+                "Tool retry policy exhausted without a result",
+                recoverable=True,
+                details={"max_attempts": retry_policy.max_attempts},
+            )
+        )
 
     def _wrap_call_tool_result(self, name: str, result, *, attempt: int) -> dict:
         texts = []

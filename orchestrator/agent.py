@@ -5,22 +5,25 @@ import logging
 import uuid
 
 import httpx
-import llm
-
-logger = logging.getLogger(__name__)
-import memory.long_term as lt
-from prompts import ORCHESTRATE_PROMPT, SYNTHESIZE_PROMPT, ORCHESTRATOR_REFLECT_PROMPT, build_memory_hint
-
-from orchestrator import events as evt
-from orchestrator import errors as err
-from a2a.client.client_factory import ClientFactory, ClientConfig
+from a2a.client.client_factory import ClientConfig, ClientFactory
 from a2a.helpers import get_artifact_text, get_message_text
 from a2a.helpers.proto_helpers import new_text_message
 from a2a.types.a2a_pb2 import SendMessageRequest, TaskState
 
-from runtime import run_context
-from runtime import trace
+import llm
+import memory.long_term as lt
 from config import A2A_CLIENT_TIMEOUT, PORT_RESEARCH_AGENT
+from orchestrator import errors as err
+from orchestrator import events as evt
+from prompts import (
+    ORCHESTRATE_PROMPT,
+    ORCHESTRATOR_REFLECT_PROMPT,
+    SYNTHESIZE_PROMPT,
+    build_memory_hint,
+)
+from runtime import run_context, trace
+
+logger = logging.getLogger(__name__)
 
 RESEARCH_AGENT_URL = f"http://localhost:{PORT_RESEARCH_AGENT}"
 
@@ -44,7 +47,7 @@ class OrchestratorAgent:
     async def _reflect(self, query: str, tasks: list[dict], subagent_results: list[str]) -> None:
         outcomes = "\n".join(
             f"Subagent {i + 1} ({t['mission'][:80]}): {'failed' if err.is_failure_text(r) else 'succeeded'}"
-            for i, (t, r) in enumerate(zip(tasks, subagent_results))
+            for i, (t, r) in enumerate(zip(tasks, subagent_results, strict=False))
         )
         prompt = ORCHESTRATOR_REFLECT_PROMPT.format(
             query=query,
@@ -86,7 +89,9 @@ class OrchestratorAgent:
                             ok=True,
                             content=final_answer[:500],
                         )
-                        await queue.put(evt.task_result(task_label, final_answer, run_id=context_id))
+                        await queue.put(
+                            evt.task_result(task_label, final_answer, run_id=context_id)
+                        )
                         result_sent = True
                 elif event.HasField("status_update"):
                     state = event.status_update.status.state
@@ -94,15 +99,21 @@ class OrchestratorAgent:
                         text = get_message_text(event.status_update.status.message)
                         if text:
                             try:
-                                await queue.put(evt.status_text(task_label, text, run_id=context_id))
+                                await queue.put(
+                                    evt.status_text(task_label, text, run_id=context_id)
+                                )
                             except ValueError as e:
-                                status_error = err.exception_error(e, source="orchestrator", code="A2A_STATUS_FORMAT_ERROR")
-                                await queue.put(evt.observation(
-                                    task_label,
-                                    status_error.message,
-                                    run_id=context_id,
-                                    data={"raw_status": text},
-                                ))
+                                status_error = err.exception_error(
+                                    e, source="orchestrator", code="A2A_STATUS_FORMAT_ERROR"
+                                )
+                                await queue.put(
+                                    evt.observation(
+                                        task_label,
+                                        status_error.message,
+                                        run_id=context_id,
+                                        data={"raw_status": text},
+                                    )
+                                )
                     elif state in (TaskState.TASK_STATE_FAILED, TaskState.TASK_STATE_CANCELED):
                         text = get_message_text(event.status_update.status.message)
                         state_name = TaskState.Name(state).removeprefix("TASK_STATE_").lower()
@@ -126,7 +137,9 @@ class OrchestratorAgent:
                     error_code=final_error.code if final_error else None,
                     content=final_answer[:500],
                 )
-                await queue.put(evt.task_result(task_label, final_answer, run_id=context_id, error=final_error))
+                await queue.put(
+                    evt.task_result(task_label, final_answer, run_id=context_id, error=final_error)
+                )
             trace.record("task_done", run_id=context_id, task_id=task_label)
             await queue.put(evt.task_done(task_label, run_id=context_id))
 
@@ -144,24 +157,27 @@ class OrchestratorAgent:
                 data={"tasks": [{"id": t["id"], "mission": t["mission"]} for t in tasks]},
             )
 
-            await queue.put(evt.plan(
-                [{"id": t["id"], "mission": t["mission"]} for t in tasks],
-                run_id=context_id,
-            ))
+            await queue.put(
+                evt.plan(
+                    [{"id": t["id"], "mission": t["mission"]} for t in tasks],
+                    run_id=context_id,
+                )
+            )
 
             async with httpx.AsyncClient(timeout=A2A_CLIENT_TIMEOUT) as http:
                 factory = ClientFactory(ClientConfig(httpx_client=http))
 
                 coros = [
-                    self._run_task(factory, t["mission"], context_id, t["id"], queue)
-                    for t in tasks
+                    self._run_task(factory, t["mission"], context_id, t["id"], queue) for t in tasks
                 ]
                 raw_results = await asyncio.gather(*coros, return_exceptions=True)
 
             run_context.clear(context_id)
 
-            subagent_results = [
-                r if not isinstance(r, Exception) else err.failed_text(err.exception_error(r, "orchestrator"))
+            subagent_results: list[str] = [
+                r  # type: ignore[misc]
+                if not isinstance(r, Exception)
+                else err.failed_text(err.exception_error(r, "orchestrator"))
                 for r in raw_results
             ]
 

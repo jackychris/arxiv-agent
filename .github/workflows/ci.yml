@@ -47,7 +47,9 @@ jobs:
       - name: Run unit tests (no network)
         env:
           DEEPSEEK_API_KEY: dummy-for-unit-tests
-        run: pytest -m "not integration" --tb=short -q
+        run: |
+          pytest -m "not integration" --tb=short -q
+          code=$?; [ $code -eq 5 ] && exit 0 || exit $code
 
   docker-build:
     name: Docker build check

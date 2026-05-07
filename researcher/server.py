@@ -1,14 +1,13 @@
 # researcher/server.py
-from starlette.applications import Starlette
-
 from a2a.server.request_handlers import DefaultRequestHandlerV2
 from a2a.server.routes import create_agent_card_routes, create_jsonrpc_routes
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types.a2a_pb2 import AgentCapabilities, AgentCard, AgentInterface, AgentSkill
 from a2a.utils.constants import TransportProtocol
+from starlette.applications import Starlette
 
-from researcher.executor import ResearchAgentExecutor
 from config import PORT_RESEARCH_AGENT
+from researcher.executor import ResearchAgentExecutor
 
 _agent_card = AgentCard(
     name="Research Agent",

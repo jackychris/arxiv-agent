@@ -31,7 +31,5 @@ def no_answer() -> str:
 
 def is_failure_text(text: str) -> bool:
     return text.startswith("[") and (
-        "error" in text.lower()
-        or "interrupted" in text.lower()
-        or "no answer" in text.lower()
+        "error" in text.lower() or "interrupted" in text.lower() or "no answer" in text.lower()
     )

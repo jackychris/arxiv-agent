@@ -5,12 +5,14 @@ from dataclasses import dataclass
 class RetryPolicy:
     max_attempts: int = 3
     backoff_seconds: float = 1.0
-    retryable_codes: frozenset[str] = frozenset({
-        "MCP_TOOL_ERROR",
-        "MCP_TOOL_TIMEOUT",
-        "TOOL_ERROR",
-        "TOOL_TIMEOUT",
-    })
+    retryable_codes: frozenset[str] = frozenset(
+        {
+            "MCP_TOOL_ERROR",
+            "MCP_TOOL_TIMEOUT",
+            "TOOL_ERROR",
+            "TOOL_TIMEOUT",
+        }
+    )
 
 
 DEFAULT_TOOL_RETRY_POLICY = RetryPolicy()
@@ -24,7 +26,9 @@ def error_code(result: dict) -> str | None:
     return str(code) if code else None
 
 
-def should_retry(result: dict, attempt: int, policy: RetryPolicy = DEFAULT_TOOL_RETRY_POLICY) -> bool:
+def should_retry(
+    result: dict, attempt: int, policy: RetryPolicy = DEFAULT_TOOL_RETRY_POLICY
+) -> bool:
     if result.get("ok") is True:
         return False
     code = error_code(result)

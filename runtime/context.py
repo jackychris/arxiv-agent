@@ -16,11 +16,7 @@ class RunContext:
 
     def get_others(self, context_id: str, task_id: str) -> str:
         entries = self._store.get_entries(context_id)
-        lines = [
-            f"[Step {step}] {content}"
-            for tid, step, content in entries
-            if tid != task_id
-        ]
+        lines = [f"[Step {step}] {content}" for tid, step, content in entries if tid != task_id]
         if not lines:
             return ""
         return "Other tasks found so far:\n" + "\n".join(lines[-10:])

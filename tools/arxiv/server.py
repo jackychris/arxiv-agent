@@ -29,8 +29,14 @@ async def list_tools() -> list[types.Tool]:
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "search keywords"},
-                    "max_results": {"type": "integer", "description": "number of papers to return, default 5"},
-                    "days": {"type": "integer", "description": "if set, only return papers from the last N days"},
+                    "max_results": {
+                        "type": "integer",
+                        "description": "number of papers to return, default 5",
+                    },
+                    "days": {
+                        "type": "integer",
+                        "description": "if set, only return papers from the last N days",
+                    },
                     "author": {"type": "string", "description": "if set, filter by author name"},
                 },
                 "required": ["query"],
@@ -42,7 +48,10 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "paper_id": {"type": "string", "description": "arxiv paper ID, e.g. '2005.11401'"},
+                    "paper_id": {
+                        "type": "string",
+                        "description": "arxiv paper ID, e.g. '2005.11401'",
+                    },
                 },
                 "required": ["paper_id"],
             },
@@ -53,10 +62,22 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "paper_id": {"type": "string", "description": "arxiv paper ID, e.g. '2005.11401'"},
-                    "include_references": {"type": "boolean", "description": "if true, return papers this paper cites, default false"},
-                    "include_citations": {"type": "boolean", "description": "if true, return papers that cite this paper, default false"},
-                    "max_results": {"type": "integer", "description": "max papers to return per list, default 10"},
+                    "paper_id": {
+                        "type": "string",
+                        "description": "arxiv paper ID, e.g. '2005.11401'",
+                    },
+                    "include_references": {
+                        "type": "boolean",
+                        "description": "if true, return papers this paper cites, default false",
+                    },
+                    "include_citations": {
+                        "type": "boolean",
+                        "description": "if true, return papers that cite this paper, default false",
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "max papers to return per list, default 10",
+                    },
                 },
                 "required": ["paper_id"],
             },
@@ -81,9 +102,9 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             if inspect.iscoroutinefunction(fn):
                 result = await fn(**arguments)
             else:
-                result = await asyncio.to_thread(fn, **arguments)
+                result = await asyncio.to_thread(fn, **arguments) # type: ignore
         except Exception as e:
-            result = {"error": str(e)}
+            result = {"error": str(e)} # type: ignore
     return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
 
 
@@ -111,6 +132,7 @@ def build_http_app() -> Starlette:
 
 def run_http(port: int = 8765):
     import uvicorn
+
     uvicorn.run(build_http_app(), host="127.0.0.1", port=port)
 
 

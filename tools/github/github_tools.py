@@ -2,8 +2,11 @@
 import asyncio
 import base64
 import logging
+
 import httpx
+
 from config import GITHUB_HTTP_TIMEOUT, GITHUB_TOKEN
+
 from ._rate_limit import github_api_call
 
 _BASE = "https://api.github.com"
@@ -20,7 +23,7 @@ def _headers() -> dict:
 
 
 async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
-    for attempt, delay in enumerate([0.0] + _GITHUB_429_RETRY_DELAYS):
+    for attempt, delay in enumerate([0.0, *_GITHUB_429_RETRY_DELAYS]):
         if delay:
             logger.warning("GitHub 429, waiting %.0fs before retry %d", delay, attempt)
             await asyncio.sleep(delay)

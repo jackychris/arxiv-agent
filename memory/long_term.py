@@ -2,7 +2,7 @@
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError
@@ -56,7 +56,7 @@ def _save(data: dict) -> None:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def _normalize_lesson(text: str) -> str:
@@ -101,9 +101,9 @@ def _normalize_entry(tool: str, reflection: str | dict) -> dict:
             "seen": 1,
         }
     try:
-        return MemoryEntry(**entry).to_dict()
+        return MemoryEntry(**entry).to_dict()  # type: ignore[arg-type]
     except ValidationError:
-        fallback = {
+        fallback: dict[str, object] = {
             "tool": tool,
             "lesson": str(entry.get("lesson") or "").strip() or "Unspecified lesson.",
             "outcome": "mixed",
@@ -114,7 +114,7 @@ def _normalize_entry(tool: str, reflection: str | dict) -> dict:
             "last_seen_at": now,
             "seen": 1,
         }
-        return MemoryEntry(**fallback).to_dict()
+        return MemoryEntry(**fallback).to_dict()  # type: ignore[arg-type]
 
 
 def _merge_entries(entries: list[dict]) -> list[dict]:
@@ -128,7 +128,9 @@ def _merge_entries(entries: list[dict]) -> list[dict]:
             merged[lesson_key] = entry
             continue
         existing["seen"] = int(existing.get("seen") or 1) + int(entry.get("seen") or 1)
-        existing["last_seen_at"] = max(str(existing.get("last_seen_at") or ""), str(entry.get("last_seen_at") or ""))
+        existing["last_seen_at"] = max(
+            str(existing.get("last_seen_at") or ""), str(entry.get("last_seen_at") or "")
+        )
         existing_tags = list(existing.get("tags") or [])
         for tag in entry.get("tags") or []:
             if tag not in existing_tags:

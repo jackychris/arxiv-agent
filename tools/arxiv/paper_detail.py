@@ -1,7 +1,9 @@
 # tools/arxiv/paper_detail.py
 import asyncio
+
 import arxiv
 from markitdown import MarkItDown
+
 from config import ARXIV_FETCH_TIMEOUT
 
 from ._rate_limit import arxiv_api_call
@@ -24,9 +26,11 @@ async def _fetch_url(url: str) -> str | None:
 
 async def get_paper_detail(paper_id: str) -> dict:
     results = await arxiv_api_call(
-        lambda: list(arxiv.Client(page_size=1, num_retries=2, delay_seconds=3.0).results(
-            arxiv.Search(id_list=[paper_id])
-        ))
+        lambda: list(
+            arxiv.Client(page_size=1, num_retries=2, delay_seconds=3.0).results(
+                arxiv.Search(id_list=[paper_id])
+            )
+        )
     )
     if not results:
         return {"error": f"Paper '{paper_id}' not found"}

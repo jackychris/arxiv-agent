@@ -3,11 +3,11 @@ import asyncio
 import time
 
 from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
-from orchestrator.events import encode_sse, heartbeat
 from api.schemas import ChatRequest, ChatResponse
 from config import SSE_HEARTBEAT_INTERVAL
+from orchestrator.events import encode_sse, heartbeat
 
 router = APIRouter()
 
@@ -33,16 +33,14 @@ async def stream(query: str, request: Request):
     queue: asyncio.Queue = asyncio.Queue()
 
     async def generate():
-        agent_task = asyncio.create_task(
-            request.app.state.agent.run_streaming(query, queue)
-        )
+        agent_task = asyncio.create_task(request.app.state.agent.run_streaming(query, queue))
         try:
             while True:
                 if await request.is_disconnected():
                     break
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=SSE_HEARTBEAT_INTERVAL)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield heartbeat()
                     continue
                 if event is None:

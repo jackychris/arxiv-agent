@@ -1,6 +1,8 @@
-#llm.py
+# llm.py
 import asyncio
-from openai import AsyncOpenAI, RateLimitError, APIStatusError
+
+from openai import APIStatusError, AsyncOpenAI, RateLimitError
+
 from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, MODEL_NAME, TEMPERATURE
 
 client = AsyncOpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
@@ -28,6 +30,7 @@ async def _create(messages: list[dict], **kwargs) -> str:
                 await asyncio.sleep(_RETRY_DELAY)
             else:
                 raise
+    raise RuntimeError("LLM retries exhausted without returning or raising")
 
 
 async def chat(messages: list[dict]) -> str:

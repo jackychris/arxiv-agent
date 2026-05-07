@@ -17,7 +17,7 @@ class ArxivRateLimitError(RuntimeError):
 
 
 async def arxiv_api_call(fn, *args, **kwargs):
-    delays = [0.0] + list(ARXIV_429_RETRY_DELAYS)
+    delays = [0.0, *ARXIV_429_RETRY_DELAYS]
     for wait in delays:
         if wait:
             await _sleep(wait)

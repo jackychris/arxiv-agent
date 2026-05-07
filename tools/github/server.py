@@ -2,7 +2,6 @@
 import asyncio
 import inspect
 import json
-import sys
 from contextlib import asynccontextmanager
 
 import mcp.types as types
@@ -11,7 +10,7 @@ from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.applications import Starlette
 from starlette.routing import Mount
 
-from .github_tools import search_repos, get_repo_readme, search_code
+from .github_tools import get_repo_readme, search_code, search_repos
 
 server = Server("github")
 
@@ -25,10 +24,22 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "search keywords, e.g. paper title or topic"},
-                    "language": {"type": "string", "description": "filter by programming language, e.g. 'python'"},
-                    "sort": {"type": "string", "description": "sort by 'stars' (default) or 'updated'"},
-                    "max_results": {"type": "integer", "description": "number of repos to return, default 5"},
+                    "query": {
+                        "type": "string",
+                        "description": "search keywords, e.g. paper title or topic",
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "filter by programming language, e.g. 'python'",
+                    },
+                    "sort": {
+                        "type": "string",
+                        "description": "sort by 'stars' (default) or 'updated'",
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "number of repos to return, default 5",
+                    },
                 },
                 "required": ["query"],
             },
@@ -39,7 +50,10 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "full_name": {"type": "string", "description": "repository full name, e.g. 'huggingface/peft'"},
+                    "full_name": {
+                        "type": "string",
+                        "description": "repository full name, e.g. 'huggingface/peft'",
+                    },
                 },
                 "required": ["full_name"],
             },
@@ -50,9 +64,15 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "code search query, e.g. 'class LoRALayer'"},
+                    "query": {
+                        "type": "string",
+                        "description": "code search query, e.g. 'class LoRALayer'",
+                    },
                     "language": {"type": "string", "description": "filter by programming language"},
-                    "max_results": {"type": "integer", "description": "number of results to return, default 5"},
+                    "max_results": {
+                        "type": "integer",
+                        "description": "number of results to return, default 5",
+                    },
                 },
                 "required": ["query"],
             },
@@ -77,9 +97,9 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             if inspect.iscoroutinefunction(fn):
                 result = await fn(**arguments)
             else:
-                result = await asyncio.to_thread(fn, **arguments)
+                result = await asyncio.to_thread(fn, **arguments) # type: ignore
         except Exception as e:
-            result = {"error": str(e)}
+            result = {"error": str(e)} # type: ignore
     return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
 
 

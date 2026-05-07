@@ -16,7 +16,9 @@ def step_status(step: int, thought: str, action: str, action_input: dict) -> str
     )
 
 
-def observation_status(observation: str, step: int | None = None, tool: str | None = None, max_chars: int = 500) -> str:
+def observation_status(
+    observation: str, step: int | None = None, tool: str | None = None, max_chars: int = 500
+) -> str:
     preview = observation[:max_chars] + ("..." if len(observation) > max_chars else "")
     return json.dumps(
         {

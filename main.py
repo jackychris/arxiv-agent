@@ -2,8 +2,9 @@
 import asyncio
 import logging
 import os
-import uvicorn
 from contextlib import asynccontextmanager
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -14,27 +15,29 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-from orchestrator import OrchestratorAgent
-from researcher.server import build_app as build_research_app
 from api.routes import router
 from config import (
+    PORT_GITHUB_MCP,
     PORT_MAIN,
     PORT_MCP,
-    PORT_GITHUB_MCP,
-    PORT_WEB_MCP,
     PORT_RESEARCH_AGENT,
+    PORT_WEB_MCP,
     SERVER_START_TIMEOUT,
     validate_required,
 )
+from orchestrator import OrchestratorAgent
+from researcher.server import build_app as build_research_app
 from tools.arxiv.server import build_http_app as build_mcp_app
 from tools.github.server import build_http_app as build_github_mcp_app
 from tools.web.server import build_http_app as build_web_mcp_app
 
 
-async def _serve(app, host: str, port: int, timeout: float = SERVER_START_TIMEOUT) -> uvicorn.Server:
+async def _serve(
+    app, host: str, port: int, timeout: float = SERVER_START_TIMEOUT
+) -> uvicorn.Server:
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)
-    asyncio.create_task(server.serve())
+    _ = asyncio.create_task(server.serve())  # noqa: RUF006
     deadline = asyncio.get_event_loop().time() + timeout
     while asyncio.get_event_loop().time() < deadline:
         try:

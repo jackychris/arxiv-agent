@@ -33,6 +33,9 @@ ignore = [
     "SIM117", # nested-with (readability preference)
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["E402"]  # logging.basicConfig must run before app imports
+
 [tool.ruff.lint.isort]
 known-first-party = [
     "api", "config", "llm", "mcp_client", "memory",

@@ -4,24 +4,22 @@ import json
 import logging
 import uuid
 
-import llm
-import memory.long_term as lt
-from researcher import errors as research_errors
-from researcher import events as research_events
-from config import ENABLE_RUN_CONTEXT, MAX_STEPS
-from memory.short_term import ShortTermMemory
-from mcp_client import MCPClient
-from prompts import TOOL_REFLECT_PROMPT, build_memory_hint, build_system_prompt
-from researcher.reflection import build_reflection_history
-
 from a2a.helpers.proto_helpers import new_text_part
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types.a2a_pb2 import Task, TaskState, TaskStatus
 
-from runtime import run_context
-from runtime import trace
+import llm
+import memory.long_term as lt
+from config import ENABLE_RUN_CONTEXT, MAX_STEPS
+from mcp_client import MCPClient
+from memory.short_term import ShortTermMemory
+from prompts import TOOL_REFLECT_PROMPT, build_memory_hint, build_system_prompt
+from researcher import errors as research_errors
+from researcher import events as research_events
+from researcher.reflection import build_reflection_history
+from runtime import run_context, trace
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +84,9 @@ class ResearchAgentExecutor(AgentExecutor):
                         step_hint = "2 steps remaining. This is your last chance to call a tool. Use it wisely."
                     else:
                         step_hint = f"{remaining} steps remaining."
-                    others = run_context.get_others(context_id, task_id) if ENABLE_RUN_CONTEXT else ""
+                    others = (
+                        run_context.get_others(context_id, task_id) if ENABLE_RUN_CONTEXT else ""
+                    )
                     extras = []
                     if others:
                         extras.append({"role": "system", "content": others})
@@ -126,7 +126,9 @@ class ResearchAgentExecutor(AgentExecutor):
                         content=thought[:500],
                         data={"tool_input": action_input},
                     )
-                    step_summary = research_events.step_status(step + 1, thought, action, action_input)
+                    step_summary = research_events.step_status(
+                        step + 1, thought, action, action_input
+                    )
                     await updater.update_status(
                         TaskState.TASK_STATE_WORKING,
                         message=updater.new_agent_message([new_text_part(step_summary)]),
@@ -155,18 +157,29 @@ class ResearchAgentExecutor(AgentExecutor):
                     if ENABLE_RUN_CONTEXT:
                         run_context.publish(context_id, task_id, step + 1, observation)
                     _obs_limit = _OBS_LIMIT.get(action, _OBS_LIMIT_DEFAULT)
-                    obs_truncated = observation[:_obs_limit] + ("\n[truncated]" if len(observation) > _obs_limit else "")
+                    obs_truncated = observation[:_obs_limit] + (
+                        "\n[truncated]" if len(observation) > _obs_limit else ""
+                    )
                     memory.add("user", f"Observation: {obs_truncated}")
 
                     await updater.update_status(
                         TaskState.TASK_STATE_WORKING,
-                        message=updater.new_agent_message([
-                            new_text_part(research_events.observation_status(observation, step + 1, action))
-                        ]),
+                        message=updater.new_agent_message(
+                            [
+                                new_text_part(
+                                    research_events.observation_status(
+                                        observation, step + 1, action
+                                    )
+                                )
+                            ]
+                        ),
                     )
 
                 if final_answer is None:
-                    memory.add("system", "You have reached the maximum number of steps. Based on what you have found so far, give your best final_answer now. Do not call any tools.")
+                    memory.add(
+                        "system",
+                        "You have reached the maximum number of steps. Based on what you have found so far, give your best final_answer now. Do not call any tools.",
+                    )
                     try:
                         response = await llm.chat(memory.get())
                         memory.add("assistant", response)

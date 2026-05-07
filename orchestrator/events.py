@@ -43,11 +43,15 @@ def plan(tasks: list[dict], *, run_id: str) -> dict[str, Any]:
     return event(PLAN, run_id=run_id, data={"tasks": tasks}, tasks=tasks)
 
 
-def step(task_id: str, content: str, *, run_id: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
+def step(
+    task_id: str, content: str, *, run_id: str, data: dict[str, Any] | None = None
+) -> dict[str, Any]:
     return event(STEP, run_id=run_id, task_id=task_id, content=content, data=data)
 
 
-def observation(task_id: str, content: str, *, run_id: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
+def observation(
+    task_id: str, content: str, *, run_id: str, data: dict[str, Any] | None = None
+) -> dict[str, Any]:
     return event(OBSERVATION, run_id=run_id, task_id=task_id, content=content, data=data)
 
 
@@ -83,7 +87,9 @@ def final(content: str, *, run_id: str) -> dict[str, Any]:
     return event(FINAL, run_id=run_id, content=content)
 
 
-def error(content: str, *, run_id: str | None = None, error: AgentError | None = None) -> dict[str, Any]:
+def error(
+    content: str, *, run_id: str | None = None, error: AgentError | None = None
+) -> dict[str, Any]:
     return event(ERROR, run_id=run_id, content=content, error=error)
 
 

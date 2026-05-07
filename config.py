@@ -1,5 +1,6 @@
 # config.py
 import os
+
 from dotenv import load_dotenv
 
 from utils import parse_float_list
@@ -42,10 +43,11 @@ def validate_required() -> None:
     """Raise at startup if required environment variables are missing."""
     missing = [name for name, val in [("DEEPSEEK_API_KEY", DEEPSEEK_API_KEY)] if not val]
     if missing:
-        raise EnvironmentError(
+        raise OSError(
             f"Required environment variable(s) not set: {', '.join(missing)}. "
             "Copy .env.example to .env and fill in the values."
         )
+
 
 PORT_MAIN = _int_env("PORT_MAIN", 8000)
 PORT_MCP = _int_env("PORT_MCP", 8765)

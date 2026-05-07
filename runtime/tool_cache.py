@@ -4,6 +4,7 @@ Parallel subagents frequently query the same paper or search term.
 Caching successful results eliminates redundant network calls and
 avoids burning rate-limit quota on identical inputs.
 """
+
 from __future__ import annotations
 
 import json

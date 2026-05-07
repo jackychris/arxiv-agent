@@ -10,7 +10,7 @@ from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.applications import Starlette
 from starlette.routing import Mount
 
-from .web_tools import web_search, fetch_url
+from .web_tools import fetch_url, web_search
 
 server = Server("web")
 
@@ -25,8 +25,14 @@ async def list_tools() -> list[types.Tool]:
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "search query"},
-                    "max_results": {"type": "integer", "description": "number of results to return, default 5"},
-                    "search_depth": {"type": "string", "description": "'basic' (fast, default) or 'advanced' (deeper, slower)"},
+                    "max_results": {
+                        "type": "integer",
+                        "description": "number of results to return, default 5",
+                    },
+                    "search_depth": {
+                        "type": "string",
+                        "description": "'basic' (fast, default) or 'advanced' (deeper, slower)",
+                    },
                 },
                 "required": ["query"],
             },
@@ -61,9 +67,9 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             if inspect.iscoroutinefunction(fn):
                 result = await fn(**arguments)
             else:
-                result = await asyncio.to_thread(fn, **arguments)
+                result = await asyncio.to_thread(fn, **arguments) # type: ignore
         except Exception as e:
-            result = {"error": str(e)}
+            result = {"error": str(e)} # type: ignore
     return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
 
 

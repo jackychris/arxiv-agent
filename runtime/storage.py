@@ -9,7 +9,6 @@ from typing import Any, Protocol
 
 from config import RUN_CONTEXT_ENTRY_MAX_CHARS
 
-
 _SAFE_ID = re.compile(r"[^a-zA-Z0-9_.-]+")
 
 
@@ -36,11 +35,9 @@ def exclusive_file_lock(path: Path):
 
 
 class TraceStore(Protocol):
-    def append(self, run_id: str, event: dict) -> None:
-        ...
+    def append(self, run_id: str, event: dict) -> None: ...
 
-    def path(self, run_id: str) -> Path | None:
-        ...
+    def path(self, run_id: str) -> Path | None: ...
 
 
 class JsonlTraceStore:
@@ -60,14 +57,11 @@ class JsonlTraceStore:
 
 
 class RunContextStore(Protocol):
-    def publish(self, context_id: str, task_id: str, step: int, content: str) -> None:
-        ...
+    def publish(self, context_id: str, task_id: str, step: int, content: str) -> None: ...
 
-    def get_entries(self, context_id: str) -> list[tuple[str, int, str]]:
-        ...
+    def get_entries(self, context_id: str) -> list[tuple[str, int, str]]: ...
 
-    def clear(self, context_id: str) -> None:
-        ...
+    def clear(self, context_id: str) -> None: ...
 
 
 class InMemoryRunContextStore:
@@ -122,7 +116,9 @@ def _data_preview(data: Any) -> str:
         items = []
         for item in data[:3]:
             if isinstance(item, dict):
-                items.append(str(item.get("title") or item.get("id") or item.get("url") or item)[:120])
+                items.append(
+                    str(item.get("title") or item.get("id") or item.get("url") or item)[:120]
+                )
             else:
                 items.append(str(item)[:120])
         return "; ".join(items)

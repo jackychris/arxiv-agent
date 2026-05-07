@@ -7,7 +7,9 @@ from urllib.parse import urlparse
 
 import httpx
 from tavily import TavilyClient
+
 from config import TAVILY_API_KEY, WEB_FETCH_TIMEOUT
+
 from ._rate_limit import tavily_api_call
 
 _ARXIV_ID_RE = re.compile(r"/(?:abs|pdf|html)/([^/?#]+)")
@@ -75,6 +77,7 @@ async def web_search(query: str, max_results: int = 5, search_depth: str = "basi
                 }
                 for r in response.get("results", [])
             ]
+
         return await asyncio.to_thread(_fetch)
 
     return await tavily_api_call(_do())
@@ -88,7 +91,7 @@ async def fetch_url(url: str) -> dict:
         hint = " Use summarize_paper with the arXiv paper_id instead."
         if match:
             paper_id = match.group(1).removesuffix(".pdf")
-            hint = f" Use summarize_paper({{\"paper_id\": \"{paper_id}\"}}) instead."
+            hint = f' Use summarize_paper({{"paper_id": "{paper_id}"}}) instead.'
         return {
             "url": url,
             "error": f"fetch_url does not support arXiv URLs.{hint}",

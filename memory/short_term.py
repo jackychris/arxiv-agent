@@ -41,7 +41,7 @@ def _trim(messages: list[dict]) -> list[dict]:
         "role": "system",
         "content": f"[{dropped} earlier step(s) omitted to stay within context window]",
     }
-    return anchors + [marker] + tail
+    return [*anchors, marker, *tail]
 
 
 class ShortTermMemory:

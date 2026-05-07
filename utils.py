@@ -6,7 +6,6 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
-
 T = TypeVar("T")
 
 
