@@ -25,6 +25,13 @@ from runtime import trace
 
 logger = logging.getLogger(__name__)
 
+_OBS_LIMIT_DEFAULT = 6000
+_OBS_LIMIT: dict[str, int] = {
+    "fetch_url": 10000,
+    "get_repo_readme": 10000,
+    "get_paper_detail": 10000,
+}
+
 
 def _parse(text: str) -> dict | None:
     try:
@@ -147,7 +154,8 @@ class ResearchAgentExecutor(AgentExecutor):
 
                     if ENABLE_RUN_CONTEXT:
                         run_context.publish(context_id, task_id, step + 1, observation)
-                    obs_truncated = observation[:6000] + ("\n[truncated]" if len(observation) > 6000 else "")
+                    _obs_limit = _OBS_LIMIT.get(action, _OBS_LIMIT_DEFAULT)
+                    obs_truncated = observation[:_obs_limit] + ("\n[truncated]" if len(observation) > _obs_limit else "")
                     memory.add("user", f"Observation: {obs_truncated}")
 
                     await updater.update_status(

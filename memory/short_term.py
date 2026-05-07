@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 # ~20K tokens at 4 chars/token — well within DeepSeek's 128K context window.
 # Trimming kicks in when tool outputs (HTML, PDFs) push observations near the
 # 6000-char ceiling across many steps.
-_MAX_CHARS = 80_000
+_MAX_CHARS = 160_000
 
 
 def _total_chars(messages: list[dict]) -> int:

@@ -25,6 +25,5 @@ async def summarize_paper(paper_id: str) -> dict:
         "authors": detail["authors"],
         "published": detail["published"],
         "url": detail["url"],
-        "content": content,
         **summary,
     }
