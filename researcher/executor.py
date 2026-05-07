@@ -231,7 +231,7 @@ class ResearchAgentExecutor(AgentExecutor):
         await self._reflect(mission, memory)
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
-        updater = TaskUpdater(event_queue, context.task_id, context.context_id)
+        updater = TaskUpdater(event_queue, context.task_id or "", context.context_id or "")
         await updater.cancel()
 
     async def _reflect(self, mission: str, memory: ShortTermMemory) -> None:
