@@ -16,11 +16,11 @@ async def _create(messages: list[dict], **kwargs) -> str:
         try:
             response = await client.chat.completions.create(
                 model=MODEL_NAME,
-                messages=messages,
+                messages=messages,  # type: ignore
                 temperature=TEMPERATURE,
                 **kwargs,
             )
-            return response.choices[0].message.content
+            return response.choices[0].message.content or ""
         except RateLimitError:
             if attempt == _RETRIES - 1:
                 raise

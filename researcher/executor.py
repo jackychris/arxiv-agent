@@ -45,8 +45,8 @@ def _parse(text: str) -> dict | None:
 
 class ResearchAgentExecutor(AgentExecutor):
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        task_id = context.task_id
-        context_id = context.context_id
+        task_id: str = context.task_id or ""
+        context_id: str = context.context_id or ""
         mission = context.get_user_input()
 
         await event_queue.enqueue_event(

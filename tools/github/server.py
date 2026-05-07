@@ -97,9 +97,9 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             if inspect.iscoroutinefunction(fn):
                 result = await fn(**arguments)
             else:
-                result = await asyncio.to_thread(fn, **arguments) # type: ignore
+                result = await asyncio.to_thread(fn, **arguments)  # type: ignore
         except Exception as e:
-            result = {"error": str(e)} # type: ignore
+            result = {"error": str(e)}  # type: ignore
     return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
 
 
