@@ -223,3 +223,4 @@ runs/
 memory/long_term.json
 .vscode/
 tests/results.jsonl
+nginx/.htpasswd
