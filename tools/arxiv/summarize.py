@@ -3,6 +3,7 @@ import json
 
 import llm
 from prompts import SUMMARIZE_PROMPT
+from tools.web.web_tools import fetch_url
 
 from .paper_detail import get_paper_detail
 
@@ -29,3 +30,14 @@ async def summarize_paper(paper_id: str) -> dict:
         "url": detail["url"],
         **summary,
     }
+
+
+async def get_paper_content(
+    arxiv_id: str | None = None,
+    pdf_url: str | None = None,
+) -> dict:
+    if arxiv_id:
+        return await summarize_paper(arxiv_id)
+    if pdf_url:
+        return await fetch_url(pdf_url)
+    return {"error": "Either arxiv_id or pdf_url must be provided"}

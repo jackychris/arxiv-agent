@@ -37,7 +37,6 @@ TEMPERATURE = _float_env("TEMPERATURE", 0.7)
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
 
 
 def validate_required() -> None:

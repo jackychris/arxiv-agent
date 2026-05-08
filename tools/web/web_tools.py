@@ -13,6 +13,42 @@ from config import TAVILY_API_KEY, WEB_FETCH_TIMEOUT
 from ._rate_limit import tavily_api_call
 
 _ARXIV_ID_RE = re.compile(r"/(?:abs|pdf|html)/([^/?#]+)")
+
+_HIGH_CREDIBILITY_DOMAINS = {
+    "arxiv.org",
+    "semanticscholar.org",
+    "openalex.org",
+    "github.com",
+    "huggingface.co",
+    "openai.com",
+    "anthropic.com",
+    "deepmind.com",
+    "research.google.com",
+    "ai.meta.com",
+    "microsoft.com",
+    "nvidia.com",
+    "nature.com",
+    "science.org",
+    "acm.org",
+    "ieee.org",
+    "springer.com",
+    "wikipedia.org",
+    "readthedocs.io",
+    "pytorch.org",
+    "tensorflow.org",
+}
+_HIGH_CREDIBILITY_SUFFIXES = (".edu", ".gov")
+
+
+def _credibility(url: str) -> str:
+    host = (urlparse(url).hostname or "").lower().removeprefix("www.")
+    if host in _HIGH_CREDIBILITY_DOMAINS or host.endswith(_HIGH_CREDIBILITY_SUFFIXES):
+        return "high"
+    if any(host.endswith("." + d) for d in _HIGH_CREDIBILITY_DOMAINS):
+        return "high"
+    return "low"
+
+
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; arxiv-agent/1.0)",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5",
@@ -74,6 +110,7 @@ async def web_search(query: str, max_results: int = 5, search_depth: str = "basi
                     "url": r["url"],
                     "content": r["content"],
                     "score": round(r.get("score", 0), 3),
+                    "credibility": _credibility(r["url"]),
                 }
                 for r in response.get("results", [])
             ]

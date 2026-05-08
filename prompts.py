@@ -26,7 +26,7 @@ Rules:
 - If a search returns ok=true but empty data, retry with different keywords
 - Use a mix of tools (arxiv, web, GitHub) for comprehensive coverage
 - For paper search, prefer search_semantic_scholar (faster, includes abstracts and TLDRs). Use search_arxiv only when the user asks for very recent papers (last few weeks) or when Semantic Scholar returns no results.
-- For arXiv papers, use summarize_paper(paper_id). Do not call fetch_url on arxiv.org URLs.
+- To get full paper content, use get_paper_content(arxiv_id=...) or get_paper_content(pdf_url=...). It automatically picks the best source. Do not call fetch_url on arxiv.org URLs.
 """
 
 
@@ -36,7 +36,7 @@ def build_system_prompt(tools_desc: str) -> str:
 
 ORCHESTRATE_PROMPT = """You are a research orchestrator. Decompose the user's query into independent parallel subtasks for research subagents.
 
-Available tools subagents can use: search_semantic_scholar, search_arxiv, summarize_paper, search_repos, get_repo_readme, search_code, web_search, fetch_url
+Available tools subagents can use: search_semantic_scholar, search_arxiv, get_paper_content, search_repos, get_repo_readme, search_code, web_search, fetch_url
 
 Important: fetch_url is only for non-arXiv web pages. For arXiv URLs or arXiv paper IDs, assign missions that use summarize_paper(paper_id), not fetch_url.
 
@@ -82,7 +82,7 @@ Return JSON:
 {{
   "search_semantic_scholar": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
   "search_arxiv": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
-  "summarize_paper": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
+  "get_paper_content": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
   "search_repos": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
   "get_repo_readme": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
   "search_code": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,

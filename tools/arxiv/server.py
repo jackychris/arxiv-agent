@@ -14,7 +14,7 @@ from starlette.routing import Mount
 
 from .arxiv_search import search_arxiv
 from .semantic_scholar import search_semantic_scholar
-from .summarize import summarize_paper
+from .summarize import get_paper_content
 
 server = Server("arxiv")
 
@@ -43,17 +43,20 @@ async def list_tools() -> list[types.Tool]:
             },
         ),
         types.Tool(
-            name="summarize_paper",
-            description="Fetch full paper content by arxiv ID and return a structured summary: background, method, results, limitations, keywords, datasets. Use when you need deeper detail beyond what search results provide.",
+            name="get_paper_content",
+            description="Get full content of a paper. Provide arxiv_id if available (preferred), otherwise provide pdf_url. Automatically uses the best available source.",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "paper_id": {
+                    "arxiv_id": {
                         "type": "string",
                         "description": "arxiv paper ID, e.g. '2005.11401'",
                     },
+                    "pdf_url": {
+                        "type": "string",
+                        "description": "direct PDF or open access URL, used only when arxiv_id is not available",
+                    },
                 },
-                "required": ["paper_id"],
             },
         ),
         types.Tool(
@@ -80,7 +83,7 @@ async def list_tools() -> list[types.Tool]:
 
 _TOOLS = {
     "search_arxiv": search_arxiv,
-    "summarize_paper": summarize_paper,
+    "get_paper_content": get_paper_content,
     "search_semantic_scholar": search_semantic_scholar,
 }
 
