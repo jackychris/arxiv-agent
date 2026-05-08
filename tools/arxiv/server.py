@@ -13,7 +13,7 @@ from starlette.applications import Starlette
 from starlette.routing import Mount
 
 from .arxiv_search import search_arxiv
-from .citations import get_citation_info
+from .semantic_scholar import search_semantic_scholar
 from .summarize import summarize_paper
 
 server = Server("arxiv")
@@ -57,29 +57,22 @@ async def list_tools() -> list[types.Tool]:
             },
         ),
         types.Tool(
-            name="get_citation_info",
-            description="Get citation count for a paper, and optionally the list of papers it references or papers that cite it. Uses Semantic Scholar.",
+            name="search_semantic_scholar",
+            description="Search academic papers via Semantic Scholar. Faster than search_arxiv, includes citation counts and AI-generated TLDRs. Use this for most searches. Use search_arxiv only when you need papers from the last few weeks.",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "paper_id": {
-                        "type": "string",
-                        "description": "arxiv paper ID, e.g. '2005.11401'",
-                    },
-                    "include_references": {
-                        "type": "boolean",
-                        "description": "if true, return papers this paper cites, default false",
-                    },
-                    "include_citations": {
-                        "type": "boolean",
-                        "description": "if true, return papers that cite this paper, default false",
-                    },
+                    "query": {"type": "string", "description": "search keywords"},
                     "max_results": {
                         "type": "integer",
-                        "description": "max papers to return per list, default 10",
+                        "description": "number of papers to return, default 5",
+                    },
+                    "year_from": {
+                        "type": "integer",
+                        "description": "if set, only return papers from this year onwards, e.g. 2023",
                     },
                 },
-                "required": ["paper_id"],
+                "required": ["query"],
             },
         ),
     ]
@@ -88,7 +81,7 @@ async def list_tools() -> list[types.Tool]:
 _TOOLS = {
     "search_arxiv": search_arxiv,
     "summarize_paper": summarize_paper,
-    "get_citation_info": get_citation_info,
+    "search_semantic_scholar": search_semantic_scholar,
 }
 
 

@@ -1,16 +1,16 @@
 # tools/github/github_tools.py
-import asyncio
 import base64
 import logging
 
 import httpx
 
 from config import GITHUB_HTTP_TIMEOUT, GITHUB_TOKEN
+from utils import retry_async
 
 from ._rate_limit import github_api_call
 
 _BASE = "https://api.github.com"
-_GITHUB_429_RETRY_DELAYS = [60.0, 120.0]
+_RETRY_DELAYS = [10.0, 30.0]
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +22,26 @@ def _headers() -> dict:
     return h
 
 
+def _is_retryable(exc: BaseException) -> bool:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code == 429 or exc.response.status_code >= 500
+    return False
+
+
 async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
-    for attempt, delay in enumerate([0.0, *_GITHUB_429_RETRY_DELAYS]):
-        if delay:
-            logger.warning("GitHub 429, waiting %.0fs before retry %d", delay, attempt)
-            await asyncio.sleep(delay)
+    async def _do() -> httpx.Response:
         r = await github_api_call(client.get(url, headers=_headers(), **kwargs))
-        if r.status_code != 429:
-            return r
-    return r
+        if r.status_code == 429 or r.status_code >= 500:
+            logger.warning("GitHub %d, will retry", r.status_code)
+            r.raise_for_status()
+        return r
+
+    return await retry_async(
+        _do,
+        retry_delays=_RETRY_DELAYS,
+        is_retryable_exception=_is_retryable,
+        exhausted_exception=lambda exc, _: exc or RuntimeError("GitHub retries exhausted"),
+    )
 
 
 async def search_repos(

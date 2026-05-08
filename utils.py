@@ -96,3 +96,25 @@ def retry_sync(
                 raise
             last_exc = exc
     raise exhausted_exception(last_exc, len(schedule))
+
+
+async def retry_async(
+    fn: Callable[[], Awaitable[T]],
+    *,
+    retry_delays: list[float],
+    is_retryable_exception: Callable[[BaseException], bool],
+    exhausted_exception: Callable[[BaseException | None, int], BaseException],
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+) -> T:
+    schedule = retry_schedule(retry_delays)
+    last_exc: BaseException | None = None
+    for wait in schedule:
+        if wait:
+            await sleep(wait)
+        try:
+            return await fn()
+        except BaseException as exc:
+            if not is_retryable_exception(exc):
+                raise
+            last_exc = exc
+    raise exhausted_exception(last_exc, len(schedule))

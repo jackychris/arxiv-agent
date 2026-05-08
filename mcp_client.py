@@ -11,7 +11,6 @@ from mcp.client.streamable_http import streamable_http_client
 
 from config import MCP_TOOL_TIMEOUT
 from runtime import tool_cache
-from runtime.policy import DEFAULT_TOOL_RETRY_POLICY, RetryPolicy, backoff_seconds, should_retry
 from schemas import ErrorEnvelope, ToolResultEnvelope
 
 
@@ -144,13 +143,7 @@ class MCPClient:
                 )
         return "\n".join(lines)
 
-    async def execute_tool(
-        self,
-        name: str,
-        *,
-        retry_policy: RetryPolicy = DEFAULT_TOOL_RETRY_POLICY,
-        **kwargs,
-    ) -> str:
+    async def execute_tool(self, name: str, **kwargs) -> str:
         if name not in self._tool_to_session:
             return encode_tool_result(
                 tool_error(
@@ -166,43 +159,28 @@ class MCPClient:
             return cached
 
         session = self._tool_to_session[name]
-        for attempt in range(1, retry_policy.max_attempts + 1):
-            try:
-                result = await asyncio.wait_for(
-                    session.call_tool(name, kwargs), timeout=MCP_TOOL_TIMEOUT
-                )
-            except Exception as e:
-                envelope = tool_error(
+        try:
+            result = await asyncio.wait_for(
+                session.call_tool(name, kwargs), timeout=MCP_TOOL_TIMEOUT
+            )
+        except Exception as e:
+            return encode_tool_result(
+                tool_error(
                     name,
                     "MCP_TOOL_TIMEOUT",
                     str(e) or type(e).__name__,
                     recoverable=True,
-                    details={"exception_type": type(e).__name__, "attempt": attempt},
+                    details={"exception_type": type(e).__name__},
                 )
-            else:
-                envelope = self._wrap_call_tool_result(name, result, attempt=attempt)
-
-            envelope["meta"]["attempt"] = attempt
-            envelope["meta"]["max_attempts"] = retry_policy.max_attempts
-            if should_retry(envelope, attempt, retry_policy):
-                await asyncio.sleep(backoff_seconds(attempt, retry_policy))
-                continue
-            result_str = encode_tool_result(envelope)
-            if envelope.get("ok"):
-                tool_cache.put(name, kwargs, result_str)
-            return result_str
-
-        return encode_tool_result(
-            tool_error(
-                name,
-                "MCP_TOOL_TIMEOUT",
-                "Tool retry policy exhausted without a result",
-                recoverable=True,
-                details={"max_attempts": retry_policy.max_attempts},
             )
-        )
 
-    def _wrap_call_tool_result(self, name: str, result, *, attempt: int) -> dict:
+        envelope = self._wrap_call_tool_result(name, result)
+        result_str = encode_tool_result(envelope)
+        if envelope.get("ok"):
+            tool_cache.put(name, kwargs, result_str)
+        return result_str
+
+    def _wrap_call_tool_result(self, name: str, result) -> dict:
         texts = []
         for block in result.content:
             if getattr(block, "type", None) != "text":
@@ -211,7 +189,6 @@ class MCPClient:
                     "MCP_INVALID_CONTENT",
                     f"Tool {name!r} returned non-text content: {getattr(block, 'type', None)}",
                     recoverable=False,
-                    details={"attempt": attempt},
                 )
             texts.append(block.text)
         output = "\n".join(texts)

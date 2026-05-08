@@ -33,7 +33,7 @@ async def search_arxiv(
     )
 
     def do_fetch():
-        client = arxiv.Client(page_size=max_results, num_retries=2, delay_seconds=3.0)
+        client = arxiv.Client(page_size=max_results, num_retries=2, delay_seconds=5.0)
         return [
             {
                 "id": r.entry_id.split("/")[-1],

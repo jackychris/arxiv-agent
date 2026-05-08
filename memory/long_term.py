@@ -16,9 +16,9 @@ _MAX_ACTIVE_PER_TOOL = 6
 _MAX_STORED_PER_TOOL = 30
 
 _TOOLS = [
+    "search_semantic_scholar",
     "search_arxiv",
     "summarize_paper",
-    "get_citation_info",
     "search_repos",
     "get_repo_readme",
     "search_code",
