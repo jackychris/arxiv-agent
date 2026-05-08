@@ -6,7 +6,7 @@ from markitdown import MarkItDown
 
 from config import ARXIV_FETCH_TIMEOUT
 
-from ._rate_limit import arxiv_api_call
+from ._rate_limit import arxiv_api_call, arxiv_throttled
 
 _md = MarkItDown()
 
@@ -37,8 +37,8 @@ async def get_paper_detail(paper_id: str) -> dict:
     r = results[0]
 
     content = (
-        await _fetch_url(f"https://arxiv.org/html/{paper_id}")
-        or await _fetch_url(r.pdf_url)
+        await arxiv_throttled(_fetch_url(f"https://arxiv.org/html/{paper_id}"))
+        or await arxiv_throttled(_fetch_url(r.pdf_url))
         or r.summary
     )
 

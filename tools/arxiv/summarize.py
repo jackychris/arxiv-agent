@@ -1,11 +1,15 @@
 # tools/arxiv/summarize.py
 import json
+import re
+from urllib.parse import urlparse
 
 import llm
 from prompts import SUMMARIZE_PROMPT
 from tools.web.web_tools import fetch_url
 
 from .paper_detail import get_paper_detail
+
+_ARXIV_ID_RE = re.compile(r"/(?:abs|pdf|html)/([^/?#]+)")
 
 
 async def summarize_paper(paper_id: str) -> dict:
@@ -39,5 +43,10 @@ async def get_paper_content(
     if arxiv_id:
         return await summarize_paper(arxiv_id)
     if pdf_url:
+        host = (urlparse(pdf_url).hostname or "").lower()
+        if host == "arxiv.org" or host.endswith(".arxiv.org"):
+            match = _ARXIV_ID_RE.search(pdf_url)
+            if match:
+                return await summarize_paper(match.group(1).removesuffix(".pdf"))
         return await fetch_url(pdf_url)
     return {"error": "Either arxiv_id or pdf_url must be provided"}

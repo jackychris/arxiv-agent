@@ -33,7 +33,7 @@ _STALE_PATTERNS = {
         "truncation",
         "truncated",
     ],
-    "summarize_paper": [
+    "get_paper_content": [
         "fetch the abstract directly via fetch_url",
         "fetch the abstract page directly",
         "fallback after fetch_url",

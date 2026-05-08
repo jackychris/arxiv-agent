@@ -38,7 +38,7 @@ ORCHESTRATE_PROMPT = """You are a research orchestrator. Decompose the user's qu
 
 Available tools subagents can use: search_semantic_scholar, search_arxiv, get_paper_content, search_repos, get_repo_readme, search_code, web_search, fetch_url
 
-Important: fetch_url is only for non-arXiv web pages. For arXiv URLs or arXiv paper IDs, assign missions that use summarize_paper(paper_id), not fetch_url.
+Important: fetch_url is only for non-arXiv web pages. For arXiv URLs or arXiv paper IDs, assign missions that use get_paper_content(arxiv_id=...), not fetch_url.
 
 Return JSON:
 {{
@@ -76,7 +76,7 @@ Conversation history (thoughts, actions, compact tool result observations):
 
 Observation lines summarize tool result envelopes. Treat ok=false and error_code as the actual tool outcome. For each tool that was used, write one concise actionable lesson — what worked, what failed, and what to do differently next time. Only include durable lessons that should survive across future runs; avoid generic advice. Use null for tools not used.
 
-Current hard rule: fetch_url is only for non-arXiv web pages. For arXiv papers, use summarize_paper(paper_id); do not record lessons that recommend fetch_url for arXiv URLs or arXiv abstract pages.
+Current hard rule: fetch_url is only for non-arXiv web pages. For arXiv papers, use get_paper_content(arxiv_id=...); do not record lessons that recommend fetch_url for arXiv URLs or arXiv abstract pages.
 
 Return JSON:
 {{

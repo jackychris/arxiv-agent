@@ -16,6 +16,11 @@ class ArxivRateLimitError(RuntimeError):
         self.attempts = attempts
 
 
+async def arxiv_throttled(coro):
+    async with _lock:
+        return await coro
+
+
 async def arxiv_api_call(fn, *args, **kwargs):
     delays = [0.0, *ARXIV_429_RETRY_DELAYS]
     for wait in delays:
