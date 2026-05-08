@@ -1,11 +1,15 @@
 # llm.py
 import asyncio
 
-from openai import APIStatusError, AsyncOpenAI, RateLimitError
+from openai import APIStatusError, APITimeoutError, AsyncOpenAI, RateLimitError
 
 from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, MODEL_NAME, TEMPERATURE
 
-client = AsyncOpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+client = AsyncOpenAI(
+    api_key=DEEPSEEK_API_KEY,
+    base_url=DEEPSEEK_BASE_URL,
+    timeout=120.0,
+)
 
 _RETRIES = 3
 _RETRY_DELAY = 5.0
@@ -22,6 +26,10 @@ async def _create(messages: list[dict], **kwargs) -> str:
             )
             return response.choices[0].message.content or ""
         except RateLimitError:
+            if attempt == _RETRIES - 1:
+                raise
+            await asyncio.sleep(_RETRY_DELAY * (attempt + 1))
+        except APITimeoutError:
             if attempt == _RETRIES - 1:
                 raise
             await asyncio.sleep(_RETRY_DELAY * (attempt + 1))
