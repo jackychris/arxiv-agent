@@ -20,7 +20,7 @@ async def list_tools() -> list[types.Tool]:
     return [
         types.Tool(
             name="web_search",
-            description="Search the web using Tavily. Returns titles, URLs, and content snippets. Use for finding blog posts, tutorials, news, industry announcements, or anything not on arxiv/GitHub.",
+            description="Search the web using Tavily. Use for blog posts, tutorials, news, benchmarks, industry announcements, or any topic not well covered by arxiv or GitHub.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -39,7 +39,7 @@ async def list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="fetch_url",
-            description="Fetch a non-arXiv web page and return its content as markdown. Do not use for arxiv.org URLs; use summarize_paper with the arXiv paper_id instead.",
+            description="Fetch a web page and return its content as markdown. Use to read a specific URL found via web_search. Never use for arxiv.org URLs — use summarize_paper(paper_id) instead.",
             inputSchema={
                 "type": "object",
                 "properties": {

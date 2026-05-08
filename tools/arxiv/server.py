@@ -24,7 +24,7 @@ async def list_tools() -> list[types.Tool]:
     return [
         types.Tool(
             name="search_arxiv",
-            description="Search arxiv for academic papers. Supports filtering by author and recency.",
+            description="Search arxiv for academic papers. Use only when you need papers from the last few weeks (real-time index). For general searches prefer search_semantic_scholar which is faster. Supports filtering by author and date range.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -44,7 +44,7 @@ async def list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="summarize_paper",
-            description="Fetch a paper by ID and return a structured summary: background, method, results, limitations, keywords, datasets.",
+            description="Fetch full paper content by arxiv ID and return a structured summary: background, method, results, limitations, keywords, datasets. Use when you need deeper detail beyond what search results provide.",
             inputSchema={
                 "type": "object",
                 "properties": {

@@ -20,7 +20,7 @@ async def list_tools() -> list[types.Tool]:
     return [
         types.Tool(
             name="search_repos",
-            description="Search GitHub repositories. Returns stars, forks, language, topics, last update. Good for finding code implementations of papers or libraries for a topic.",
+            description="Search GitHub repositories by keyword. Returns stars, forks, language, topics, last update. Use to find code implementations of papers, official repos, or libraries for a topic.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -46,7 +46,7 @@ async def list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="get_repo_readme",
-            description="Fetch the README of a GitHub repository to understand what it does, how to use it, and what it implements.",
+            description="Fetch the README of a GitHub repository. Use after search_repos to understand what a repo does, its usage, and what paper or algorithm it implements.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -60,7 +60,7 @@ async def list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="search_code",
-            description="Search for code snippets on GitHub. Useful for finding specific algorithm implementations, class definitions, or usage examples.",
+            description="Search for code snippets on GitHub. Use to find specific algorithm implementations, class definitions, or usage examples when you know what to look for in code.",
             inputSchema={
                 "type": "object",
                 "properties": {
