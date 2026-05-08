@@ -57,7 +57,7 @@ class OrchestratorAgent:
         try:
             reflection = await llm.complete([{"role": "user", "content": prompt}])
             if reflection.strip():
-                lt.add("orchestrator", reflection.strip())
+                await lt.add("orchestrator", reflection.strip())
         except Exception:
             logger.warning("Orchestrator reflection failed", exc_info=True)
 
@@ -150,6 +150,8 @@ class OrchestratorAgent:
         try:
             trace.record("run_start", run_id=context_id, content=query)
             tasks = await self._plan(query)
+            for t in tasks:
+                t["id"] = str(uuid.uuid4())
             run_context.clear(context_id)
             trace.record(
                 "plan_created",

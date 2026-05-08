@@ -1,4 +1,5 @@
 # memory/long_term.py
+import asyncio
 import json
 import os
 import re
@@ -10,6 +11,7 @@ from pydantic import ValidationError
 from schemas import MemoryEntry
 
 _PATH = os.path.join(os.path.dirname(__file__), "long_term.json")
+_LOCK = asyncio.Lock()
 _MAX_ACTIVE_PER_TOOL = 6
 _MAX_STORED_PER_TOOL = 30
 
@@ -157,17 +159,18 @@ def _compact_entries(tool: str, entries: list[Any], *, active_only: bool) -> lis
     return ranked[:limit]
 
 
-def add(tool: str, reflection: str | dict) -> None:
-    data = _load()
-    if tool not in data:
-        data[tool] = []
-    entries = [_normalize_entry(tool, entry) for entry in data[tool]]
-    new_entry = _normalize_entry(tool, reflection)
-    if not new_entry["lesson"] or _is_stale(tool, new_entry):
-        return
-    entries.append(new_entry)
-    data[tool] = _compact_entries(tool, entries, active_only=False)
-    _save(data)
+async def add(tool: str, reflection: str | dict) -> None:
+    async with _LOCK:
+        data = _load()
+        if tool not in data:
+            data[tool] = []
+        entries = [_normalize_entry(tool, entry) for entry in data[tool]]
+        new_entry = _normalize_entry(tool, reflection)
+        if not new_entry["lesson"] or _is_stale(tool, new_entry):
+            return
+        entries.append(new_entry)
+        data[tool] = _compact_entries(tool, entries, active_only=False)
+        _save(data)
 
 
 def _is_stale(tool: str, reflection: Any) -> bool:

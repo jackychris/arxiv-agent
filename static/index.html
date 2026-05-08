@@ -189,13 +189,13 @@
         board.className = "task-board";
         board.id = "task-board";
         workspace.appendChild(board);
-        event.tasks.forEach(t => {
+        event.tasks.forEach((t, index) => {
           const card = document.createElement("div");
           card.className = "task-card";
           const header = document.createElement("div");
           header.className = "task-header";
           const title = document.createElement("span");
-          title.textContent = `Task ${t.id}: ${t.mission}`;
+          title.textContent = `Task ${index + 1}: ${t.mission}`;
           const status = document.createElement("span");
           status.className = "task-status";
           status.id = "status-" + t.id;

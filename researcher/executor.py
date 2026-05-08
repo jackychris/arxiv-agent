@@ -242,6 +242,6 @@ class ResearchAgentExecutor(AgentExecutor):
             data = json.loads(response)
             for tool, reflection in data.items():
                 if reflection and reflection != "null":
-                    lt.add(tool, reflection)
+                    await lt.add(tool, reflection)
         except Exception:
             logger.warning("Task %s reflection failed", mission[:80], exc_info=True)

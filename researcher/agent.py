@@ -94,6 +94,6 @@ class ResearchAgent:
             data = json.loads(response)
             for tool, reflection in data.items():
                 if reflection and reflection != "null":
-                    lt.add(tool, reflection)
+                    await lt.add(tool, reflection)
         except Exception:
             pass
