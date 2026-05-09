@@ -15,6 +15,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+import db
 from api.routes import router
 from config import (
     PORT_GITHUB_MCP,
@@ -53,6 +54,7 @@ async def _serve(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_required()
+    await db.init()
     mcp_server = await _serve(build_mcp_app(), "127.0.0.1", PORT_MCP)
     github_mcp_server = await _serve(build_github_mcp_app(), "127.0.0.1", PORT_GITHUB_MCP)
     web_mcp_server = await _serve(build_web_mcp_app(), "127.0.0.1", PORT_WEB_MCP)
@@ -64,6 +66,7 @@ async def lifespan(app: FastAPI):
     github_mcp_server.should_exit = True
     web_mcp_server.should_exit = True
     research_server.should_exit = True
+    await db.close()
 
 
 app = FastAPI(title="arxiv Research Agent", lifespan=lifespan)

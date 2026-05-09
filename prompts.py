@@ -74,20 +74,20 @@ Mission: {mission}
 Conversation history (thoughts, actions, compact tool result observations):
 {history}
 
-Observation lines summarize tool result envelopes. Treat ok=false and error_code as the actual tool outcome. For each tool that was used, write one concise actionable lesson — what worked, what failed, and what to do differently next time. Only include durable lessons that should survive across future runs; avoid generic advice. Use null for tools not used.
+For each tool that was used, write one concise actionable lesson — what worked, what failed, what to do differently. Only durable lessons that apply to future runs; no generic advice. Use null for tools not used.
 
-Current hard rule: fetch_url is only for non-arXiv web pages. For arXiv papers, use get_paper_content(arxiv_id=...); do not record lessons that recommend fetch_url for arXiv URLs or arXiv abstract pages.
+Hard rule: fetch_url is only for non-arXiv pages. For arXiv papers use get_paper_content(arxiv_id=...).
 
-Return JSON:
+Return JSON with a plain string lesson (or null) per tool:
 {{
-  "search_semantic_scholar": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
-  "search_arxiv": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
-  "get_paper_content": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
-  "search_repos": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
-  "get_repo_readme": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
-  "search_code": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
-  "web_search": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null,
-  "fetch_url": {{"lesson": "specific durable lesson", "outcome": "success|failure|mixed", "tags": ["short_tag"], "error_code": null}} or null
+  "search_semantic_scholar": "lesson" or null,
+  "search_arxiv": "lesson" or null,
+  "get_paper_content": "lesson" or null,
+  "search_repos": "lesson" or null,
+  "get_repo_readme": "lesson" or null,
+  "search_code": "lesson" or null,
+  "web_search": "lesson" or null,
+  "fetch_url": "lesson" or null
 }}
 """
 
@@ -109,36 +109,20 @@ Return a plain text reflection (no JSON).
 
 def build_memory_hint(memories: dict) -> str:
     lines = []
-    for tool, entries in memories.items():
-        if entries:
+    for tool, lessons in memories.items():
+        if lessons:
             lines.append(f"[{tool} experience]")
-            for entry in entries:
-                if isinstance(entry, dict):
-                    lesson = entry.get("lesson") or ""
-                    tags = ", ".join(entry.get("tags") or [])
-                    outcome = entry.get("outcome") or "mixed"
-                    seen = entry.get("seen") or 1
-                    meta = f"outcome={outcome}; seen={seen}"
-                    if tags:
-                        meta += f"; tags={tags}"
-                    lines.append(f"- {lesson} ({meta})")
-                else:
-                    lines.append(f"- {entry}")
+            for lesson in lessons:
+                lines.append(f"- {lesson}")
     return "\n".join(lines) if lines else ""
 
 
-SUMMARIZE_PROMPT = """You are an expert academic paper analyst. Read the following paper content and produce a structured summary in JSON format.
+SUMMARIZE_PROMPT = """You are an expert academic paper analyst. Read the following paper content and produce a summary in JSON format.
 
 Output only valid JSON with these fields:
 {{
-  "background": "what problem this paper addresses and why it matters",
-  "method": "the core approach or technique proposed",
-  "results": "key findings and performance metrics",
-  "limitations": "acknowledged weaknesses or future work",
-  "keywords": ["list", "of", "core", "concepts"],
-  "methods_used": ["specific", "models", "or", "algorithms"],
-  "datasets": ["datasets", "used", "for", "evaluation"],
-  "tasks": ["tasks", "this", "paper", "addresses"]
+  "summary": "comprehensive 3-5 sentence summary covering the problem, approach, key results, and limitations",
+  "keywords": ["list", "of", "core", "concepts", "methods", "and", "datasets"]
 }}
 
 Paper content:

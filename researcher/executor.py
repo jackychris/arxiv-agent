@@ -60,7 +60,7 @@ class ResearchAgentExecutor(AgentExecutor):
         updater = TaskUpdater(event_queue, task_id, context_id)
         await updater.start_work()
 
-        memories = lt.get_all()
+        memories = await lt.get_all()
         tool_memories = {k: v for k, v in memories.items() if k != "orchestrator"}
         memory_hint = build_memory_hint(tool_memories)
 

@@ -222,5 +222,11 @@ runs/
 *.log
 memory/long_term.json
 .vscode/
-tests/results.jsonl
+tests/
+docs/
+.agents/
+.claude/
+.codex/
 nginx/.htpasswd
+paper_content/
+check_db.py

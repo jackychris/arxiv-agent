@@ -30,7 +30,7 @@ RESEARCH_AGENT_URL = f"http://localhost:{PORT_RESEARCH_AGENT}"
 
 class OrchestratorAgent:
     async def _plan(self, query: str) -> list[dict]:
-        orch_memories = lt.get("orchestrator")
+        orch_memories = await lt.get("orchestrator")
         memory_hint = build_memory_hint({"orchestrator": orch_memories})
         extra = f"\n\nPast planning experience:\n{memory_hint}" if memory_hint else ""
         prompt = ORCHESTRATE_PROMPT.format(query=query) + extra

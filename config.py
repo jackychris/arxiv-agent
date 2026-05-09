@@ -38,6 +38,18 @@ TEMPERATURE = _float_env("TEMPERATURE", 0.7)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
+_pg_user = os.getenv("POSTGRES_USER", "arxiv")
+_pg_pass = os.getenv("POSTGRES_PASSWORD", "")
+_pg_host = os.getenv("POSTGRES_HOST", "postgres")
+_pg_db = os.getenv("POSTGRES_DB", "arxiv_agent")
+DATABASE_URL = (
+    os.getenv("DATABASE_URL") or f"postgresql://{_pg_user}:{_pg_pass}@{_pg_host}:5432/{_pg_db}"
+)
+PAPER_CONTENT_DIR = os.getenv("PAPER_CONTENT_DIR", "./paper_content")
+
+MEMORY_MAX_ACTIVE = _int_env("MEMORY_MAX_ACTIVE", 8)
+MEMORY_MAX_STORED = _int_env("MEMORY_MAX_STORED", 30)
+
 
 def validate_required() -> None:
     """Raise at startup if required environment variables are missing."""

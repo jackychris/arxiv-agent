@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 def utc_now() -> str:
@@ -66,44 +66,6 @@ class SSEEvent(BaseModel):
     content: str | None = None
     data: dict[str, Any] = Field(default_factory=dict)
     error: ErrorEnvelope | dict[str, Any] | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        return self.model_dump(mode="json")
-
-
-MemoryOutcome = Literal["success", "failure", "mixed"]
-
-
-class MemoryEntry(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    tool: str
-    lesson: str
-    outcome: MemoryOutcome = "mixed"
-    source: str = "reflection"
-    tags: list[str] = Field(default_factory=list)
-    error_code: str | None = None
-    created_at: str = Field(default_factory=utc_now)
-    last_seen_at: str = Field(default_factory=utc_now)
-    seen: int = Field(default=1, ge=1)
-
-    @field_validator("lesson")
-    @classmethod
-    def _lesson_required(cls, lesson: str) -> str:
-        lesson = lesson.strip()
-        if not lesson:
-            raise ValueError("lesson is required")
-        return lesson
-
-    @field_validator("tags")
-    @classmethod
-    def _compact_tags(cls, tags: list[str]) -> list[str]:
-        compacted = []
-        for tag in tags:
-            tag = str(tag).strip()
-            if tag and tag not in compacted:
-                compacted.append(tag)
-        return compacted[:6]
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(mode="json")

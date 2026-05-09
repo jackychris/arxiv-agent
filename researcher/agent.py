@@ -23,7 +23,7 @@ class ResearchAgent:
             return await self._run(query, client, verbose)
 
     async def _run(self, query: str, client: MCPClient, verbose: bool) -> str:
-        memories = lt.get_all()
+        memories = await lt.get_all()
         tool_memories = {k: v for k, v in memories.items() if k != "orchestrator"}
         memory_hint = build_memory_hint(tool_memories)
 
