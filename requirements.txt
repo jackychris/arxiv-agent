@@ -3,6 +3,8 @@ asyncpg
 openai
 arxiv
 fastapi
+pydantic
+starlette
 uvicorn
 mcp
 markitdown
@@ -10,5 +12,7 @@ tavily-python
 a2a-sdk[http-server]
 protobuf<6
 httpx
+langchain-core
+langgraph==1.1.10
 langgraph-checkpoint-postgres
 psycopg[binary]
