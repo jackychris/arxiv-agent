@@ -2,7 +2,9 @@
 import asyncio
 import inspect
 import json
+import logging
 import sys
+import time
 from contextlib import asynccontextmanager
 
 import mcp.types as types
@@ -17,6 +19,7 @@ from .semantic_scholar import search_semantic_scholar
 from .summarize import get_paper_content
 
 server = Server("arxiv")
+logger = logging.getLogger(__name__)
 
 
 @server.list_tools()
@@ -90,6 +93,8 @@ _TOOLS = {
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
+    started = time.monotonic()
+    logger.info("arxiv MCP call_tool start: %s args=%s", name, arguments)
     fn = _TOOLS.get(name)
     if fn is None:
         result = f"Unknown tool: {name}"
@@ -99,9 +104,26 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 result = await fn(**arguments)
             else:
                 result = await asyncio.to_thread(fn, **arguments)  # type: ignore
+            logger.info(
+                "arxiv MCP call_tool finished: %s in %.2fs",
+                name,
+                time.monotonic() - started,
+            )
         except Exception as e:
+            logger.exception(
+                "arxiv MCP call_tool failed: %s after %.2fs",
+                name,
+                time.monotonic() - started,
+            )
             result = {"error": str(e)}  # type: ignore
-    return [types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
+    payload = json.dumps(result, ensure_ascii=False)
+    logger.info(
+        "arxiv MCP call_tool responding: %s bytes=%d total=%.2fs",
+        name,
+        len(payload),
+        time.monotonic() - started,
+    )
+    return [types.TextContent(type="text", text=payload)]
 
 
 async def run_stdio():
@@ -129,7 +151,7 @@ def build_http_app() -> Starlette:
 def run_http(port: int = 8765):
     import uvicorn
 
-    uvicorn.run(build_http_app(), host="127.0.0.1", port=port)
+    uvicorn.run(build_http_app(), host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":

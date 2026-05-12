@@ -2,6 +2,7 @@
 import asyncio
 import inspect
 import json
+import sys
 from contextlib import asynccontextmanager
 
 import mcp.types as types
@@ -88,3 +89,14 @@ def build_http_app() -> Starlette:
         routes=[Mount("/mcp", app=handle_mcp)],
         lifespan=lifespan,
     )
+
+
+def run_http(port: int = 8768):
+    import uvicorn
+
+    uvicorn.run(build_http_app(), host="0.0.0.0", port=port, log_level="info")
+
+
+if __name__ == "__main__":
+    if "--http" in sys.argv:
+        run_http()

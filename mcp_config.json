@@ -1,13 +1,13 @@
 {
   "servers": {
     "arxiv": {
-      "url": "http://127.0.0.1:8765/mcp"
+      "url": "http://127.0.0.1:8765/mcp/"
     },
     "github": {
-      "url": "http://127.0.0.1:8767/mcp"
+      "url": "http://127.0.0.1:8767/mcp/"
     },
     "web": {
-      "url": "http://127.0.0.1:8768/mcp"
+      "url": "http://127.0.0.1:8768/mcp/"
     }
   }
 }

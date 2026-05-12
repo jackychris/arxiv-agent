@@ -4,41 +4,445 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>arXiv Research Agent</title>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f5f5f5;
-      color: #1a1a1a;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f5f8;
+      color: #111827;
       min-height: 100vh;
+      padding: 24px;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1480px;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      padding: 48px 16px;
+      gap: 18px;
     }
 
-    h1 { font-size: 1.6rem; font-weight: 600; margin-bottom: 32px; color: #111; }
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 2px 2px;
+    }
+    .topbar-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+    .eyebrow {
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #5b6472;
+    }
+    h1 {
+      font-size: 2rem;
+      line-height: 1.1;
+      font-weight: 650;
+      color: #0f172a;
+    }
+    .topbar-subtitle {
+      max-width: 760px;
+      font-size: 0.93rem;
+      line-height: 1.55;
+      color: #5b6472;
+    }
+    .session-chip {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid #d8dee8;
+      border-radius: 999px;
+      background: #fff;
+      font-size: 0.76rem;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    .session-chip strong {
+      font-weight: 600;
+      color: #111827;
+    }
 
-    .search-box { width: 100%; max-width: 720px; display: flex; gap: 8px; }
+    .composer-panel {
+      background: #ffffff;
+      border: 1px solid #dde3ec;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .composer-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .composer-help {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: #6b7280;
+    }
+    .search-box {
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .main-shell {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: sticky;
+      top: 18px;
+    }
+    .sidebar-panel,
+    #workspace {
+      background: #fff;
+      border: 1px solid #dde3ec;
+      border-radius: 14px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .sidebar-panel {
+      overflow: hidden;
+    }
+    .sidebar-body,
+    .history-panel {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sidebar-body {
+      padding: 14px;
+    }
+    .sidebar-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 14px 14px 0;
+    }
+    .sidebar-tab {
+      height: 36px;
+      border-radius: 9px;
+      border: 1px solid #d8dee8;
+      background: #f8fafc;
+      color: #475467;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .sidebar-tab.active {
+      background: #111827;
+      border-color: #111827;
+      color: #fff;
+    }
+    .history-header {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.82rem; color: #374151; font-weight: 650;
+    }
+    .history-subtitle { font-size: 0.74rem; color: #6b7280; font-weight: 400; }
+    .history-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .history-card {
+      background: #fbfcfe; border: 1px solid #e2e8f0; border-radius: 10px;
+      padding: 12px 13px; display: flex; flex-direction: column; gap: 8px;
+      cursor: pointer; min-width: 0;
+    }
+    .history-card:hover { border-color: #c3cfdd; background: #fff; }
+    .history-card.active { border-color: #7c8aa0; box-shadow: 0 0 0 1px rgba(124, 138, 160, 0.16); background: #fff; }
+    .history-top {
+      display: flex; align-items: center; gap: 8px; justify-content: space-between;
+      min-width: 0;
+    }
+    .history-status {
+      display: inline-flex; align-items: center; padding: 2px 8px;
+      border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+      background: #f0f0f0; color: #444; flex: none;
+    }
+    .history-status.completed { background: #eaf8ea; color: #267326; }
+    .history-status.running { background: #eef4ff; color: #2b5fab; }
+    .history-status.waiting_plan_review,
+    .history-status.waiting_critique_review { background: #fff7e6; color: #9a6700; }
+    .history-status.disconnected { background: #f3f4f6; color: #4b5563; }
+    .history-status.failed { background: #ffe9e9; color: #b42318; }
+    .history-time { font-size: 0.72rem; color: #888; white-space: nowrap; }
+    .history-query {
+      font-size: 0.82rem; line-height: 1.45; color: #222;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .history-meta {
+      font-size: 0.74rem; color: #777; display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .history-empty {
+      background: #fbfcfe; border: 1px dashed #d7dee8; border-radius: 10px;
+      padding: 16px; color: #6b7280; font-size: 0.8rem;
+    }
+    .history-actions {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .history-actions button {
+      height: 32px; padding: 0 12px; align-self: auto; font-size: 0.78rem;
+    }
+    .history-actions button.secondary { background: #6b7280; }
+    .history-actions button.danger { background: #b42318; }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .metric-card,
+    .dashboard-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #fbfcfe;
+    }
+    .metric-card {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .metric-label {
+      font-size: 0.74rem;
+      color: #667085;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .metric-value {
+      font-size: 1.35rem;
+      color: #0f172a;
+      font-weight: 650;
+    }
+    .metric-footnote {
+      font-size: 0.75rem;
+      color: #6b7280;
+      line-height: 1.45;
+    }
+    .dashboard-card {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .dashboard-card-title {
+      font-size: 0.8rem;
+      font-weight: 650;
+      color: #1f2937;
+    }
+    .dashboard-card-copy {
+      font-size: 0.78rem;
+      color: #4b5563;
+      line-height: 1.55;
+    }
+    .dashboard-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .dashboard-item {
+      padding: 10px;
+      border: 1px solid #e3e8ef;
+      border-radius: 9px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .dashboard-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .dashboard-item-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #111827;
+      line-height: 1.4;
+    }
+    .dashboard-item-meta {
+      font-size: 0.74rem;
+      color: #6b7280;
+      line-height: 1.45;
+    }
+    .sidebar-cta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sidebar-cta button {
+      height: 32px;
+      padding: 0 12px;
+      align-self: auto;
+      font-size: 0.78rem;
+    }
+    .sidebar-cta button.secondary {
+      background: #6b7280;
+    }
 
     textarea {
-      flex: 1; padding: 12px 14px; font-size: 0.95rem;
-      border: 1px solid #d0d0d0; border-radius: 8px;
+      flex: 1; padding: 14px 15px; font-size: 0.95rem;
+      border: 1px solid #d5dbe5; border-radius: 10px;
       resize: vertical; min-height: 80px; outline: none;
-      line-height: 1.5; background: #fff;
+      line-height: 1.5; background: #fcfdff;
     }
-    textarea:focus { border-color: #555; }
+    textarea:focus {
+      border-color: #475569;
+      box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
+    }
 
     button {
-      padding: 0 20px; font-size: 0.9rem; font-weight: 500;
-      background: #1a1a1a; color: #fff; border: none;
-      border-radius: 8px; cursor: pointer; align-self: flex-end; height: 40px;
+      padding: 0 18px; font-size: 0.88rem; font-weight: 600;
+      background: #111827; color: #fff; border: none;
+      border-radius: 10px; cursor: pointer; align-self: flex-end; height: 42px;
     }
     button:disabled { background: #999; cursor: not-allowed; }
 
-    #workspace { width: 100%; max-width: 1180px; margin-top: 24px; display: none; flex-direction: column; gap: 12px; }
+    #workspace {
+      width: 100%;
+      min-height: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .workspace-empty {
+      min-height: 680px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      color: #64748b;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      text-align: center;
+      background:
+        linear-gradient(180deg, rgba(248,250,252,0.9), rgba(255,255,255,0.95));
+    }
+    .workspace-empty-copy {
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .workspace-empty-copy strong {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .run-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      width: 100%;
+      padding: 16px;
+    }
+    .graph-panel {
+      background: #fbfcfe; border: 1px solid #e2e8f0; border-radius: 12px;
+      overflow: hidden; position: sticky; top: 12px;
+      display: flex; flex-direction: column;
+      max-height: calc(100vh - 32px);
+    }
+    .graph-header {
+      padding: 12px 14px; background: #f8fafc; border-bottom: 1px solid #e5e7eb;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.84rem; font-weight: 650; color: #1f2937;
+    }
+    .graph-subtitle { font-size: 0.74rem; color: #6b7280; font-weight: 400; }
+    .node-list {
+      padding: 8px; display: flex; flex-direction: column; gap: 8px;
+      flex: 1; min-height: 0;
+      overflow-y: auto; overflow-x: hidden;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+    }
+    .node-card {
+      border: 1px solid #e5e5e5; border-radius: 8px; background: #fff;
+      overflow: hidden;
+      flex: none;
+    }
+    .node-card[open] { border-color: #cfcfcf; }
+    .node-card > summary {
+      list-style: none; cursor: pointer; padding: 9px 10px;
+      display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+      font-size: 0.8rem; color: #333;
+    }
+    .node-card > summary::-webkit-details-marker { display: none; }
+    .node-caret { color: #777; font-size: 0.72rem; width: 10px; flex: none; }
+    .node-card[open] .node-caret { transform: rotate(90deg); }
+    .node-name { min-width: 0; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .node-meta { min-width: 0; color: #777; font-size: 0.72rem; white-space: nowrap; text-align: right; }
+
+    @media (max-width: 1100px) {
+      .node-card > summary {
+        grid-template-columns: 12px minmax(0, 1fr);
+      }
+      .node-meta {
+        grid-column: 2;
+        text-align: left;
+      }
+    }
+    .node-body {
+      border-top: 1px solid #eee; padding: 9px 10px 10px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .node-content {
+      font-size: 0.78rem; line-height: 1.55; color: #333;
+      max-height: min(46vh, 420px); overflow: auto; word-break: break-word;
+      overscroll-behavior: contain;
+    }
+    .node-content h1, .node-content h2, .node-content h3 { font-size: 0.9rem; margin: 0.8em 0 0.3em; }
+    .node-content p { margin: 0.45em 0; }
+    .node-content ul, .node-content ol { padding-left: 1.2em; margin: 0.45em 0; }
+    .node-data {
+      margin: 0; padding: 8px; border-radius: 6px; background: #f6f6f6;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.7rem; line-height: 1.45; white-space: pre-wrap;
+      max-height: min(34vh, 280px); overflow: auto; color: #333;
+      overscroll-behavior: contain;
+    }
+    #activity { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+
+    .round-header {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.82rem; font-weight: 600; color: #888;
+      padding: 4px 0;
+    }
+    .round-header::before, .round-header::after {
+      content: ""; flex: 1; height: 1px; background: #e0e0e0;
+    }
 
     .task-board {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -46,13 +450,32 @@
     }
 
     .task-card {
-      background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;
       min-width: 0;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
     }
     .task-header {
-      padding: 10px 16px; background: #f9f9f9; border-bottom: 1px solid #eee;
+      padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e5e7eb;
       font-size: 0.82rem; font-weight: 600; color: #444;
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 10px;
+    }
+    .task-header-copy {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .task-title {
+      font-size: 0.8rem;
+      font-weight: 650;
+      color: #111827;
+      line-height: 1.4;
+    }
+    .task-summary {
+      font-size: 0.75rem;
+      color: #6b7280;
+      line-height: 1.5;
     }
     .task-status { font-weight: 400; color: #888; font-size: 0.78rem; }
     .task-status.done { color: #2a9d2a; }
@@ -90,6 +513,75 @@
       max-height: 160px; overflow: auto;
     }
     .event-message { color: inherit; white-space: pre-wrap; word-break: break-word; }
+    .tool-result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .tool-result-card {
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.82);
+      padding: 9px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .tool-result-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .tool-result-title {
+      font-size: 0.77rem;
+      font-weight: 650;
+      color: #1f2937;
+      line-height: 1.45;
+    }
+    .tool-result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: #667085;
+      line-height: 1.45;
+    }
+    .tool-result-url {
+      font-size: 0.72rem;
+      color: #2c5282;
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .tool-result-url:hover {
+      text-decoration: underline;
+    }
+    .tool-result-snippet {
+      font-size: 0.75rem;
+      color: #475467;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .expandable-text {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-start;
+    }
+    .expandable-toggle {
+      height: 28px;
+      padding: 0 10px;
+      align-self: flex-start;
+      border-radius: 8px;
+      background: #eef2f7;
+      color: #344054;
+      border: 1px solid #d8dee8;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
     .task-result {
       margin: 8px 0 4px; padding: 12px 14px;
       background: #f0faf0; border-radius: 6px; border-left: 3px solid #68d391;
@@ -103,12 +595,48 @@
 
     .synth-notice {
       background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
-      padding: 12px 16px; font-size: 0.85rem; color: #888; text-align: center;
+      padding: 12px 16px; font-size: 0.85rem; color: #4b5563; text-align: center;
     }
 
+    .critique-notice {
+      padding: 10px 16px; border-radius: 8px; font-size: 0.83rem;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .critique-notice.ok {
+      background: #f0faf0; border: 1px solid #c6f6d5; color: #276749;
+    }
+    .critique-notice.gaps {
+      background: #fffbeb; border: 1px solid #fbd38d; color: #744210;
+    }
+    .critique-gaps { font-size: 0.78rem; display: flex; flex-direction: column; gap: 4px; padding-left: 4px; }
+    .critique-gaps li { list-style: none; padding: 3px 0; }
+    .critique-gaps li::before { content: "→ "; color: #b7791f; }
+
+    .review-card {
+      background: #fff; border: 1px solid #dbe3ee; border-radius: 12px;
+      padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .review-title { font-size: 0.86rem; font-weight: 650; color: #222; }
+    .review-text { font-size: 0.8rem; line-height: 1.6; color: #555; white-space: pre-wrap; }
+    .review-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .review-actions button {
+      height: 36px; align-self: auto; padding: 0 14px; font-size: 0.82rem;
+      background: #222;
+    }
+    .review-actions button.secondary { background: #6b7280; }
+    .review-feedback {
+      width: 100%; min-height: 72px; resize: vertical;
+      font-size: 0.82rem; border-radius: 8px; border: 1px solid #d6d6d6;
+      padding: 10px 12px; line-height: 1.5;
+    }
+    .review-hint { font-size: 0.76rem; color: #777; }
+    .review-hint.is-disconnected { color: #5b6472; }
+
     .final-card {
-      background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
       padding: 24px 28px; line-height: 1.7; font-size: 0.95rem;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .final-card h1, .final-card h2, .final-card h3 { margin: 1.2em 0 0.4em; font-weight: 600; }
     .final-card h1 { font-size: 1.3rem; }
@@ -129,78 +657,170 @@
     .error { color: #c00; font-size: 0.88rem; padding: 12px 16px; background: #fff0f0; border-radius: 8px; border: 1px solid #fcc; }
 
     @media (max-width: 640px) {
-      body { padding: 32px 12px; }
+      body { padding: 16px; }
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
       .search-box { flex-direction: column; }
       button { align-self: stretch; }
+      .main-shell,
+      .run-layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .graph-panel { position: static; }
+      .node-list { max-height: none; }
       .task-board { grid-template-columns: 1fr; }
       .task-steps { max-height: none; }
+      #workspace,
+      .workspace-empty { min-height: 520px; }
     }
   </style>
 </head>
 <body>
-  <h1>arXiv Research Agent</h1>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-copy">
+        <div class="eyebrow">Research Workspace</div>
+        <h1>arXiv Research Agent</h1>
+        <div class="topbar-subtitle">
+          Multi-step literature research with checkpoints, human review, and source-aware synthesis.
+        </div>
+      </div>
+      <div class="session-chip">
+        <span>Session</span>
+        <strong id="session-label">guest session</strong>
+      </div>
+    </header>
 
-  <div class="search-box">
-    <textarea id="query" placeholder="Ask a research question, e.g. Compare RAG and fine-tuning approaches for adapting LLMs"></textarea>
-    <button id="btn" onclick="submit()">Search</button>
+    <section class="composer-panel">
+      <div class="composer-label">
+        <span>Research Brief</span>
+        <span class="composer-help">Use a specific question, comparison, or paper topic.</span>
+      </div>
+      <div class="search-box">
+        <textarea id="query" placeholder="Ask a research question, e.g. Compare RAG and fine-tuning approaches for adapting LLMs"></textarea>
+        <button id="btn" onclick="submit()">Start Research</button>
+      </div>
+    </section>
+
+    <div class="main-shell">
+      <aside class="sidebar">
+        <section class="sidebar-panel">
+          <div class="sidebar-tabs">
+            <button id="sidebar-tab-dashboard" class="sidebar-tab active" type="button">Dashboard</button>
+            <button id="sidebar-tab-history" class="sidebar-tab" type="button">History</button>
+          </div>
+          <div id="sidebar-body" class="sidebar-body"></div>
+        </section>
+      </aside>
+      <main id="workspace">
+        <div class="workspace-empty">
+          <div class="workspace-empty-copy">
+            <strong>No active run</strong>
+            <span>Start a query to open the live graph view, task activity, review checkpoints, and final answer in this workspace.</span>
+          </div>
+        </div>
+      </main>
+    </div>
   </div>
-
-  <div id="workspace"></div>
 
   <script>
     let es = null;
     let done = false;
+    let planCount = 0;
+    let currentRunId = "";
+    let currentGuestId = "";
+    let activeHistoryRunId = "";
+    let sidebarView = "dashboard";
+    let latestRuns = [];
+    let streamActive = false;
+    let intentionalStreamClose = false;
     const taskCards = {};
+    const nodeCards = {};
 
-    function submit() {
+    async function submit() {
+      await ensureGuest();
       const query = document.getElementById("query").value.trim();
       if (!query) return;
 
       if (es) { es.close(); es = null; }
+      intentionalStreamClose = false;
       done = false;
+      planCount = 0;
+      currentRunId = "";
 
       const btn = document.getElementById("btn");
       const workspace = document.getElementById("workspace");
 
       btn.disabled = true;
       workspace.style.display = "flex";
-      workspace.innerHTML = '<div class="synth-notice">Planning tasks...</div>';
+      workspace.innerHTML = `
+        <div class="run-layout">
+          <section class="graph-panel">
+            <div class="graph-header">
+              <span>Execution Trace</span>
+              <span class="graph-subtitle">system checkpoints</span>
+            </div>
+            <div id="node-list" class="node-list"></div>
+          </section>
+          <section id="activity"><div class="synth-notice">Preparing the research plan...</div></section>
+        </div>`;
       Object.keys(taskCards).forEach(k => delete taskCards[k]);
+      Object.keys(nodeCards).forEach(k => delete nodeCards[k]);
 
-      es = new EventSource("/stream?query=" + encodeURIComponent(query));
-
-      es.onmessage = (e) => {
-        const event = JSON.parse(e.data);
-        handleEvent(event, workspace, btn);
-      };
-
-      es.onerror = () => {
-        if (done) return;
-        workspace.innerHTML += '<div class="error">Connection error.</div>';
-        btn.disabled = false;
-        es.close();
-      };
+      startStream("/stream?query=" + encodeURIComponent(query), workspace, btn);
+      loadHistory();
     }
 
     function handleEvent(event, workspace, btn) {
+      if (event.run_id) currentRunId = event.run_id;
+      const activity = getActivity(workspace);
       if (event.type === "plan") {
-        workspace.innerHTML = "";
+        const planRound = Number.isInteger(event.data?.round) ? event.data.round : planCount;
+        const existingSection = activity.querySelector(`.round-section[data-round="${planRound}"]`);
+        if (existingSection) {
+          existingSection.remove();
+        }
+        if (planRound === 0 && !activity.querySelector(".round-section")) {
+          activity.innerHTML = "";
+        }
+        planCount = Math.max(planCount, planRound + 1);
+
+        const section = document.createElement("div");
+        section.className = "round-section";
+        section.dataset.round = String(planRound);
+        if (planRound > 0) {
+          const header = document.createElement("div");
+          header.className = "round-header";
+          header.textContent = `Additional research pass ${planRound}`;
+          section.appendChild(header);
+        }
+
         const board = document.createElement("div");
         board.className = "task-board";
-        board.id = "task-board";
-        workspace.appendChild(board);
+        section.appendChild(board);
+        activity.appendChild(section);
         event.tasks.forEach((t, index) => {
           const card = document.createElement("div");
           card.className = "task-card";
           const header = document.createElement("div");
           header.className = "task-header";
-          const title = document.createElement("span");
-          title.textContent = `Task ${index + 1}: ${t.mission}`;
+          const copy = document.createElement("div");
+          copy.className = "task-header-copy";
+          const title = document.createElement("div");
+          title.className = "task-title";
+          title.textContent = `Research track ${index + 1}`;
+          const summary = createExpandableText(t.mission || "", {
+            limit: 220,
+            className: "task-summary",
+          });
           const status = document.createElement("span");
           status.className = "task-status";
           status.id = "status-" + t.id;
-          status.textContent = "running...";
-          header.appendChild(title);
+          status.textContent = "in progress";
+          copy.appendChild(title);
+          copy.appendChild(summary);
+          header.appendChild(copy);
           header.appendChild(status);
           const steps = document.createElement("div");
           steps.className = "task-steps";
@@ -210,6 +830,9 @@
           board.appendChild(card);
           taskCards[t.id] = true;
         });
+
+      } else if (event.type === "node_result") {
+        upsertNodeResult(event);
 
       } else if (event.type === "step" || event.type === "observation") {
         const stepsEl = document.getElementById("steps-" + event.task_id);
@@ -227,7 +850,7 @@
           if (event.error) {
             el.appendChild(renderErrorSummary(event.error, event.content));
           } else {
-            el.innerHTML = marked.parse(event.content || "");
+            el.appendChild(renderTaskResultContent(event.content || ""));
           }
           stepsEl.appendChild(el);
           el.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -236,36 +859,781 @@
       } else if (event.type === "task_done") {
         const statusEl = document.getElementById("status-" + event.task_id);
         if (statusEl) {
-          statusEl.textContent = "done ✓";
+          statusEl.textContent = "complete";
           statusEl.className = "task-status done";
         }
 
       } else if (event.type === "synthesizing") {
         const notice = document.createElement("div");
         notice.className = "synth-notice";
-        notice.textContent = "Synthesizing results...";
-        workspace.appendChild(notice);
+        notice.textContent = "Drafting a source-backed answer from the research findings...";
+        activity.appendChild(notice);
+
+      } else if (event.type === "critique") {
+        activity.querySelectorAll(".synth-notice").forEach(el => el.remove());
+        const data = event.data || {};
+        const ok = data.ok;
+        const gaps = data.gaps || [];
+        const notice = document.createElement("div");
+        notice.className = `critique-notice ${ok ? "ok" : "gaps"}`;
+        const summary = document.createElement("div");
+        summary.textContent = ok
+          ? "The answer looks complete enough to share."
+          : `The reviewer found ${gaps.length} area${gaps.length !== 1 ? "s" : ""} that still need more evidence.`;
+        notice.appendChild(summary);
+        if (!ok && gaps.length > 0) {
+          const list = document.createElement("ul");
+          list.className = "critique-gaps";
+          gaps.forEach(g => {
+            const li = document.createElement("li");
+            li.textContent = g;
+            list.appendChild(li);
+          });
+          notice.appendChild(list);
+        }
+        activity.appendChild(notice);
+
+      } else if (event.type === "human_review") {
+        const reviewData = event.data || {};
+        const reviewOptions = Array.isArray(reviewData.options) ? reviewData.options : [];
+        if (es && (reviewOptions.length > 0 || reviewData.interrupt_id)) {
+          intentionalStreamClose = true;
+          es.close();
+          es = null;
+          streamActive = false;
+        }
+        loadHistory();
+        activity.appendChild(renderHumanReview(event, workspace, btn));
 
       } else if (event.type === "final") {
         done = true;
-        const oldNotice = workspace.querySelector(".synth-notice");
-        if (oldNotice) oldNotice.remove();
+        activity.querySelectorAll(".synth-notice").forEach(el => el.remove());
         const card = document.createElement("div");
         card.className = "final-card";
-        card.innerHTML = marked.parse(event.content);
-        workspace.appendChild(card);
+        card.innerHTML = renderMarkdown(event.content || "");
+        activity.appendChild(card);
         card.scrollIntoView({ behavior: "smooth" });
         btn.disabled = false;
-        es.close();
+        loadHistory();
+        if (es) {
+          intentionalStreamClose = true;
+          es.close();
+          es = null;
+        }
+        streamActive = false;
 
       } else if (event.type === "error") {
         const el = document.createElement("div");
         el.className = "error";
         el.appendChild(renderErrorSummary(event.error, event.content));
-        workspace.appendChild(el);
+        activity.appendChild(el);
         btn.disabled = false;
-        es.close();
+        loadHistory();
+        if (es) {
+          intentionalStreamClose = true;
+          es.close();
+          es = null;
+        }
+        streamActive = false;
       }
+    }
+
+    function startStream(url, workspace, btn) {
+      if (es) {
+        intentionalStreamClose = true;
+        es.close();
+        es = null;
+      }
+      streamActive = true;
+      intentionalStreamClose = false;
+      es = new EventSource(url);
+      es.onmessage = (e) => {
+        const event = normalizeEvent(JSON.parse(e.data));
+        handleEvent(event, workspace, btn);
+      };
+      es.onerror = async () => {
+        streamActive = false;
+        if (intentionalStreamClose) {
+          intentionalStreamClose = false;
+          return;
+        }
+        if (done) return;
+        if (es) {
+          es.close();
+          es = null;
+        }
+        const recovered = await recoverFromStreamClose(workspace, btn);
+        if (!recovered) {
+          getActivity(workspace).innerHTML += '<div class="error">Connection error.</div>';
+          btn.disabled = false;
+        }
+      };
+    }
+
+    async function recoverFromStreamClose(workspace, btn) {
+      if (!currentRunId) return false;
+      try {
+        const response = await fetch(`/runs/${encodeURIComponent(currentRunId)}`, {
+          credentials: "same-origin",
+        });
+        if (!response.ok) return false;
+        const run = await response.json();
+        await loadHistory();
+        if (["completed", "waiting_plan_review", "waiting_critique_review", "disconnected", "failed"].includes(run.status)) {
+          done = run.status === "completed";
+          renderSavedRun(run);
+          btn.disabled = false;
+          return true;
+        }
+      } catch (err) {
+        console.warn("stream recovery failed", err);
+      }
+      return false;
+    }
+
+    async function ensureGuest() {
+      if (currentGuestId) return currentGuestId;
+      const response = await fetch("/guest", { credentials: "same-origin" });
+      if (!response.ok) throw new Error("failed to initialize guest session");
+      const data = await response.json();
+      currentGuestId = data.guest_id || "";
+      const label = document.getElementById("session-label");
+      if (label) label.textContent = currentGuestId || "guest session";
+      return currentGuestId;
+    }
+
+    async function loadHistory() {
+      try {
+        await ensureGuest();
+        const response = await fetch("/runs?limit=24", { credentials: "same-origin" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        renderSidebar(mergeLocalRunState(payload.runs || []));
+      } catch (err) {
+        console.warn("history load failed", err);
+      }
+    }
+
+    function renderSidebar(runs) {
+      latestRuns = Array.isArray(runs) ? runs : [];
+      const dashboardTab = document.getElementById("sidebar-tab-dashboard");
+      const historyTab = document.getElementById("sidebar-tab-history");
+      if (dashboardTab && historyTab) {
+        dashboardTab.classList.toggle("active", sidebarView === "dashboard");
+        historyTab.classList.toggle("active", sidebarView === "history");
+      }
+      const panel = document.getElementById("sidebar-body");
+      if (!panel) return;
+      panel.innerHTML = "";
+      panel.appendChild(sidebarView === "dashboard" ? renderDashboardView(latestRuns) : renderHistoryView(latestRuns));
+    }
+
+    function renderHistoryView(runs) {
+      const panel = document.createElement("div");
+      panel.className = "history-panel";
+      panel.innerHTML = `
+        <div class="history-header">
+          <span>Recent Runs</span>
+          <span class="history-subtitle">${currentGuestId || "guest session"}</span>
+        </div>
+      `;
+      if (!Array.isArray(runs) || runs.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "history-empty";
+        empty.textContent = "No saved runs yet. Start a search and it will appear here.";
+        panel.appendChild(empty);
+        return panel;
+      }
+
+      const list = document.createElement("div");
+      list.className = "history-list";
+      runs.forEach((run) => list.appendChild(renderHistoryCard(run)));
+      panel.appendChild(list);
+      return panel;
+    }
+
+    function renderDashboardView(runs) {
+      const panel = document.createElement("div");
+      panel.className = "history-panel";
+      panel.innerHTML = `
+        <div class="history-header">
+          <span>Workspace Overview</span>
+          <span class="history-subtitle">${currentGuestId || "guest session"}</span>
+        </div>
+      `;
+
+      const active = runs.filter(run => ["running"].includes(getDisplayRunStatus(run)));
+      const actionable = runs.filter(run => ["waiting_plan_review", "waiting_critique_review", "disconnected"].includes(getDisplayRunStatus(run)));
+      const completed = runs.filter(run => getDisplayRunStatus(run) === "completed");
+      const latest = runs[0] || null;
+
+      const grid = document.createElement("div");
+      grid.className = "dashboard-grid";
+      grid.appendChild(renderMetricCard("Saved runs", String(runs.length), latest ? `Most recent update: ${formatTime(latest.updated_at || latest.created_at)}` : "Start a question to create your first run."));
+      grid.appendChild(renderMetricCard("Need attention", String(actionable.length), actionable.length ? "Runs waiting to resume or review." : active.length ? "Research is actively running." : "Nothing is waiting on you right now."));
+      panel.appendChild(grid);
+
+      const primary = document.createElement("div");
+      primary.className = "dashboard-card";
+      primary.innerHTML = `
+        <div class="dashboard-card-title">Current focus</div>
+        <div class="dashboard-card-copy">${escapeHtml(latest ? (latest.query || "Untitled run") : "No active or saved run selected yet.")}</div>
+      `;
+      if (latest) {
+        const meta = document.createElement("div");
+        meta.className = "dashboard-item-meta";
+        meta.textContent = `${formatRunStatus(getDisplayRunStatus(latest))} · ${latest.last_node || latest.last_event_type || "idle"} · round ${latest.round || 0}`;
+        primary.appendChild(meta);
+      }
+      const cta = document.createElement("div");
+      cta.className = "sidebar-cta";
+      if (latest && ["running", "waiting_plan_review", "waiting_critique_review", "disconnected"].includes(getDisplayRunStatus(latest))) {
+        const resumeBtn = document.createElement("button");
+        resumeBtn.textContent = getDisplayRunStatus(latest) === "disconnected" ? "Resume latest run" : "Open active run";
+        resumeBtn.onclick = () => openRunHistory(latest.run_id);
+        cta.appendChild(resumeBtn);
+      }
+      const historyBtn = document.createElement("button");
+      historyBtn.className = "secondary";
+      historyBtn.textContent = "Browse history";
+      historyBtn.onclick = () => {
+        sidebarView = "history";
+        renderSidebar(latestRuns);
+      };
+      cta.appendChild(historyBtn);
+      primary.appendChild(cta);
+      panel.appendChild(primary);
+
+      const reviewCard = document.createElement("div");
+      reviewCard.className = "dashboard-card";
+      reviewCard.innerHTML = `<div class="dashboard-card-title">Runs that need action</div>`;
+      if (actionable.length === 0) {
+        const copy = document.createElement("div");
+        copy.className = "dashboard-card-copy";
+        copy.textContent = "Nothing is waiting on a review decision right now.";
+        reviewCard.appendChild(copy);
+      } else {
+        const list = document.createElement("div");
+        list.className = "dashboard-list";
+        actionable.slice(0, 4).forEach((run) => list.appendChild(renderDashboardRunItem(run)));
+        reviewCard.appendChild(list);
+      }
+      panel.appendChild(reviewCard);
+
+      if (completed.length) {
+        const finishedCard = document.createElement("div");
+        finishedCard.className = "dashboard-card";
+        finishedCard.innerHTML = `<div class="dashboard-card-title">Recently completed answers</div>`;
+        const list = document.createElement("div");
+        list.className = "dashboard-list";
+        completed.slice(0, 3).forEach((run) => list.appendChild(renderDashboardRunItem(run)));
+        finishedCard.appendChild(list);
+        panel.appendChild(finishedCard);
+      }
+
+      return panel;
+    }
+
+    function renderMetricCard(label, value, footnote) {
+      const card = document.createElement("div");
+      card.className = "metric-card";
+      card.innerHTML = `
+        <div class="metric-label">${escapeHtml(label)}</div>
+        <div class="metric-value">${escapeHtml(value)}</div>
+        <div class="metric-footnote">${escapeHtml(footnote || "")}</div>
+      `;
+      return card;
+    }
+
+    function renderDashboardRunItem(run) {
+      const item = document.createElement("div");
+      item.className = "dashboard-item";
+      item.onclick = () => openRunHistory(run.run_id);
+      item.style.cursor = "pointer";
+      const displayStatus = getDisplayRunStatus(run);
+      const top = document.createElement("div");
+      top.className = "dashboard-item-top";
+      const title = document.createElement("div");
+      title.className = "dashboard-item-title";
+      title.textContent = run.query || "(untitled run)";
+      const status = document.createElement("span");
+      status.className = `history-status ${displayStatus || ""}`;
+      status.textContent = formatRunStatus(displayStatus);
+      top.appendChild(title);
+      top.appendChild(status);
+      const meta = document.createElement("div");
+      meta.className = "dashboard-item-meta";
+      meta.textContent = `${run.last_node || run.last_event_type || "idle"} · ${formatTime(run.updated_at || run.created_at)}`;
+      item.appendChild(top);
+      item.appendChild(meta);
+      return item;
+    }
+
+    function renderHistoryCard(run) {
+      const card = document.createElement("div");
+      card.className = "history-card";
+      if (run.run_id === activeHistoryRunId || run.run_id === currentRunId) {
+        card.classList.add("active");
+      }
+      card.onclick = () => openRunHistory(run.run_id);
+
+      const displayStatus = getDisplayRunStatus(run);
+      const top = document.createElement("div");
+      top.className = "history-top";
+      const status = document.createElement("span");
+      status.className = `history-status ${displayStatus || ""}`;
+      status.textContent = formatRunStatus(displayStatus);
+      const time = document.createElement("span");
+      time.className = "history-time";
+      time.textContent = formatTime(run.updated_at || run.created_at);
+      top.appendChild(status);
+      top.appendChild(time);
+
+      const query = document.createElement("div");
+      query.className = "history-query";
+      query.textContent = run.query || "(untitled run)";
+
+      const meta = document.createElement("div");
+      meta.className = "history-meta";
+      meta.innerHTML = `
+        <span>${run.answer_length || 0} chars</span>
+        <span>round ${run.round || 0}</span>
+        <span>${run.last_node || run.last_event_type || "idle"}</span>
+      `;
+
+      const actions = document.createElement("div");
+      actions.className = "history-actions";
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "danger";
+      deleteBtn.textContent = "Delete";
+      deleteBtn.onclick = async (e) => {
+        e.stopPropagation();
+        deleteBtn.disabled = true;
+        try {
+          await deleteRun(run.run_id);
+        } finally {
+          deleteBtn.disabled = false;
+        }
+      };
+      actions.appendChild(deleteBtn);
+
+      card.appendChild(top);
+      card.appendChild(query);
+      card.appendChild(meta);
+      card.appendChild(actions);
+      return card;
+    }
+
+    async function openRunHistory(runId) {
+      activeHistoryRunId = runId;
+      await loadHistory();
+      const response = await fetch(`/runs/${encodeURIComponent(runId)}`, { credentials: "same-origin" });
+      if (!response.ok) return;
+      const run = await response.json();
+      currentRunId = run.run_id || runId;
+      done = run.status === "completed";
+      planCount = 0;
+      renderSavedRun(run);
+    }
+
+    function renderSavedRun(run) {
+      const workspace = document.getElementById("workspace");
+      const btn = document.getElementById("btn");
+      btn.disabled = false;
+      const displayStatus = getDisplayRunStatus(run);
+      workspace.style.display = "flex";
+      workspace.innerHTML = `
+        <div class="run-layout">
+          <section class="graph-panel">
+            <div class="graph-header">
+              <span>Saved Run</span>
+              <span class="graph-subtitle">${escapeHtml(formatRunStatus(displayStatus))}</span>
+            </div>
+            <div id="node-list" class="node-list"></div>
+          </section>
+          <section id="activity"></section>
+        </div>`;
+      Object.keys(taskCards).forEach(k => delete taskCards[k]);
+      Object.keys(nodeCards).forEach(k => delete nodeCards[k]);
+
+      const activity = getActivity(workspace);
+      const summaryCard = document.createElement("div");
+      summaryCard.className = "review-card";
+      summaryCard.innerHTML = `
+        <div class="review-title">${escapeHtml(run.query || "Saved run")}</div>
+        <div class="review-text">Status: ${escapeHtml(formatRunStatus(displayStatus))}</div>
+        <div class="review-text">Last updated: ${escapeHtml(formatTime(run.updated_at || run.created_at))}</div>
+      `;
+      activity.appendChild(summaryCard);
+
+      if (displayStatus === "disconnected") {
+        const hint = document.createElement("div");
+        hint.className = "review-hint is-disconnected";
+        hint.textContent = "This run was stopped after the client disconnected. You can resume it from the latest checkpoint.";
+        activity.appendChild(hint);
+      }
+
+      if (run.latest_checkpoint) {
+        upsertNodeResult({
+          type: "node_result",
+          ts: new Date().toISOString(),
+          run_id: run.run_id,
+          task_id: null,
+          content: "",
+          data: {
+            node: "latest_checkpoint",
+            status: displayStatus || "saved",
+            round: run.round || 0,
+            ...run.latest_checkpoint,
+          },
+        });
+      }
+
+      if (run.current_answer) {
+        const card = document.createElement("div");
+        card.className = "final-card";
+        card.innerHTML = renderMarkdown(run.current_answer);
+        activity.appendChild(card);
+      } else {
+        const notice = document.createElement("div");
+        notice.className = "synth-notice";
+        notice.textContent = "This run has not produced a final answer yet.";
+        activity.appendChild(notice);
+      }
+
+      if (["running", "waiting_plan_review", "waiting_critique_review", "disconnected"].includes(displayStatus)) {
+        const actions = document.createElement("div");
+        actions.className = "history-actions";
+        const resumeBtn = document.createElement("button");
+        resumeBtn.textContent = displayStatus === "disconnected"
+          ? "Resume from Checkpoint"
+          : displayStatus.startsWith("waiting_")
+            ? "Resume Review"
+            : "Resume Run";
+        resumeBtn.onclick = () => {
+          workspace.innerHTML = "";
+          submitResumeRun(run.run_id, workspace, btn);
+        };
+        actions.appendChild(resumeBtn);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "danger";
+        deleteBtn.textContent = "Delete Run";
+        deleteBtn.onclick = async () => {
+          deleteBtn.disabled = true;
+          try {
+            await deleteRun(run.run_id);
+          } finally {
+            deleteBtn.disabled = false;
+          }
+        };
+        actions.appendChild(deleteBtn);
+        activity.appendChild(actions);
+      } else {
+        const actions = document.createElement("div");
+        actions.className = "history-actions";
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "danger";
+        deleteBtn.textContent = "Delete Run";
+        deleteBtn.onclick = async () => {
+          deleteBtn.disabled = true;
+          try {
+            await deleteRun(run.run_id);
+          } finally {
+            deleteBtn.disabled = false;
+          }
+        };
+        actions.appendChild(deleteBtn);
+        activity.appendChild(actions);
+      }
+    }
+
+    async function deleteRun(runId) {
+      const response = await fetch(`/runs/${encodeURIComponent(runId)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        console.warn("delete run failed", runId, response.status);
+        return;
+      }
+      if (runId === currentRunId) {
+        if (es) {
+          intentionalStreamClose = true;
+          es.close();
+          es = null;
+        }
+        streamActive = false;
+        currentRunId = "";
+        activeHistoryRunId = "";
+        done = false;
+        const workspace = document.getElementById("workspace");
+        if (workspace) {
+          workspace.innerHTML = "";
+          workspace.style.display = "none";
+        }
+      }
+      await loadHistory();
+    }
+
+    function submitResumeRun(runId, workspace, btn) {
+      done = false;
+      planCount = 0;
+      currentRunId = runId;
+      intentionalStreamClose = false;
+      workspace.style.display = "flex";
+      workspace.innerHTML = `
+        <div class="run-layout">
+          <section class="graph-panel">
+            <div class="graph-header">
+              <span>Execution Trace</span>
+              <span class="graph-subtitle">system checkpoints</span>
+            </div>
+            <div id="node-list" class="node-list"></div>
+          </section>
+          <section id="activity"><div class="synth-notice">Reopening the latest checkpoint...</div></section>
+        </div>`;
+      Object.keys(taskCards).forEach(k => delete taskCards[k]);
+      Object.keys(nodeCards).forEach(k => delete nodeCards[k]);
+      startStream(`/stream?run_id=${encodeURIComponent(runId)}&resume=true`, workspace, btn);
+      loadHistory();
+    }
+
+    function abortActiveRun() {
+      if (!streamActive || !currentRunId || done) return;
+      streamActive = false;
+      const url = `/runs/${encodeURIComponent(currentRunId)}/abort`;
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([], { type: "text/plain" }));
+          return;
+        }
+      } catch (err) {
+        console.warn("abort beacon failed", err);
+      }
+      fetch(url, { method: "POST", credentials: "same-origin", keepalive: true }).catch(() => {});
+    }
+
+    function formatRunStatus(status) {
+      if (!status) return "unknown";
+      if (status === "disconnected") return "stopped after disconnect";
+      if (status === "waiting_plan_review") return "waiting for plan review";
+      if (status === "waiting_critique_review") return "waiting for answer review";
+      return status.replaceAll("_", " ");
+    }
+
+    function getDisplayRunStatus(run) {
+      const raw = run && typeof run === "object" ? run.status : "";
+      if (run && run.run_id === currentRunId && streamActive) {
+        if (!raw || ["waiting_plan_review", "waiting_critique_review", "disconnected"].includes(raw)) {
+          return "running";
+        }
+      }
+      return raw || "unknown";
+    }
+
+    function formatTime(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString();
+    }
+
+    function getActivity(workspace) {
+      return document.getElementById("activity") || workspace;
+    }
+
+    function upsertNodeResult(event) {
+      const data = event.data || {};
+      const node = data.node || "node";
+      const round = data.round !== undefined ? `round-${data.round}` : "run";
+      const key = [node, event.task_id || round, event.ts].join(":");
+      const list = document.getElementById("node-list");
+      if (!list) return;
+
+      let card = nodeCards[key];
+      if (!card) {
+        card = document.createElement("details");
+        card.className = "node-card";
+
+        const summary = document.createElement("summary");
+        const caret = document.createElement("span");
+        caret.className = "node-caret";
+        caret.textContent = "›";
+        const name = document.createElement("span");
+        name.className = "node-name";
+        name.textContent = formatNodeName(node);
+        const meta = document.createElement("span");
+        meta.className = "node-meta";
+        summary.appendChild(caret);
+        summary.appendChild(name);
+        summary.appendChild(meta);
+
+        const body = document.createElement("div");
+        body.className = "node-body";
+        card.appendChild(summary);
+        card.appendChild(body);
+        list.appendChild(card);
+        nodeCards[key] = card;
+      }
+
+      const meta = card.querySelector(".node-meta");
+      meta.textContent = formatNodeMeta(event, data);
+
+      const body = card.querySelector(".node-body");
+      body.innerHTML = "";
+      const content = document.createElement("div");
+      content.className = "node-content";
+      content.innerHTML = renderNodeNarrative(event);
+      body.appendChild(content);
+    }
+
+    function formatNodeName(node) {
+      const labels = {
+        init: "Session started",
+        rewrite_query: "Question reframed",
+        plan_tasks: "Research plan drafted",
+        review_plan: "Plan review",
+        research_task: "Research task",
+        collect_results: "Evidence collected",
+        synthesize_answer: "Answer drafted",
+        critique_answer: "Quality review",
+        review_critique: "Answer review",
+        finalize: "Answer finalized",
+        latest_checkpoint: "Latest checkpoint",
+      };
+      return labels[node] || node.replaceAll("_", " ");
+    }
+
+    function formatNodeMeta(event, data) {
+      const parts = [data.status || "done"];
+      if (data.round !== undefined) parts.push(`r${data.round}`);
+      if (event.task_id) parts.push(event.task_id.slice(0, 8));
+      return parts.join(" · ");
+    }
+
+    function looksLikeJson(value) {
+      const text = String(value).trim();
+      return text.startsWith("{") || text.startsWith("[");
+    }
+
+    function normalizeEvent(event) {
+      if (Array.isArray(event) && event.length === 2 && event[0] === "custom") {
+        return event[1];
+      }
+      return event;
+    }
+
+    function renderHumanReview(event, workspace, btn) {
+      document.querySelectorAll(".review-card").forEach(el => el.remove());
+      const data = event.data || {};
+      const payload = data.payload || {};
+      const stage = data.stage || "human";
+      const card = document.createElement("div");
+      card.className = "review-card";
+
+      const title = document.createElement("div");
+      title.className = "review-title";
+      title.textContent = stage === "plan" ? "Review the research plan" : "Choose what happens next";
+      card.appendChild(title);
+
+      const text = document.createElement("div");
+      text.className = "review-text";
+      text.textContent = event.content || "";
+      card.appendChild(text);
+
+      if (stage === "plan" && Array.isArray(payload.tasks) && payload.tasks.length) {
+        const list = document.createElement("div");
+        list.className = "dashboard-list";
+        payload.tasks.forEach((task, index) => {
+          const item = document.createElement("div");
+          item.className = "dashboard-item";
+          const itemTitle = document.createElement("div");
+          itemTitle.className = "dashboard-item-title";
+          itemTitle.textContent = `Research track ${index + 1}`;
+          const itemMeta = createExpandableText(task.mission || "", {
+            limit: 240,
+            className: "dashboard-item-meta",
+          });
+          item.appendChild(itemTitle);
+          item.appendChild(itemMeta);
+          list.appendChild(item);
+        });
+        card.appendChild(list);
+      }
+      if (stage === "critique" && Array.isArray(payload.gaps) && payload.gaps.length) {
+        const list = document.createElement("ul");
+        list.className = "critique-gaps";
+        payload.gaps.forEach(gap => {
+          const li = document.createElement("li");
+          li.textContent = gap;
+          list.appendChild(li);
+        });
+        card.appendChild(list);
+      }
+      if ((stage === "critique" || stage === "critique_limit") && payload.current_answer) {
+        const answerCard = document.createElement("div");
+        answerCard.className = "final-card";
+        answerCard.innerHTML = renderMarkdown(payload.current_answer);
+        card.appendChild(answerCard);
+      }
+      if (stage === "critique" && Number.isInteger(payload.max_rounds)) {
+        const limit = document.createElement("div");
+        limit.className = "review-hint";
+        limit.textContent = payload.ok
+          ? `This answer already passed review. Continuing would start follow-up round ${payload.round || 0} of ${payload.max_rounds}.`
+          : `You can continue up to follow-up round ${payload.max_rounds}. This decision is currently at round ${payload.round || 0}.`;
+        card.appendChild(limit);
+      }
+
+      const feedback = document.createElement("textarea");
+      feedback.className = "review-feedback";
+      feedback.placeholder = stage === "plan"
+        ? "Optional: explain how the plan should change"
+        : "Optional: explain what the next round should focus on";
+
+      const actions = document.createElement("div");
+      actions.className = "review-actions";
+      const options = Array.isArray(data.options) ? data.options : [];
+      if (options.length > 0) {
+        card.appendChild(feedback);
+        const hint = document.createElement("div");
+        hint.className = "review-hint";
+        hint.textContent = stage === "plan"
+          ? "Feedback is only used when you choose “Replan with Feedback”."
+          : "Feedback is only used when you choose “Continue with Feedback”.";
+        card.appendChild(hint);
+      }
+      options.forEach((option, index) => {
+        const actionBtn = document.createElement("button");
+        actionBtn.type = "button";
+        actionBtn.textContent = option.label || option.action || `action-${index + 1}`;
+        if (index > 0) actionBtn.classList.add("secondary");
+        actionBtn.onclick = () => {
+          const action = option.action || "";
+          const needsFeedback = action === "replan_with_feedback" || action === "continue_with_feedback";
+          const note = feedback.value.trim();
+          if (needsFeedback && !note) {
+            feedback.focus();
+            return;
+          }
+          Array.from(actions.querySelectorAll("button")).forEach(b => b.disabled = true);
+          if (stage === "plan" && (action === "replan" || action === "replan_with_feedback")) {
+            done = false;
+          }
+          markRunAsResuming(currentRunId);
+          const params = new URLSearchParams({ run_id: currentRunId, resume: "true", action });
+          if (note) params.set("feedback", note);
+          startStream("/stream?" + params.toString(), workspace, btn);
+          card.remove();
+        };
+        actions.appendChild(actionBtn);
+      });
+      card.appendChild(actions);
+      return card;
     }
 
     function renderProgressEvent(event) {
@@ -281,24 +1649,31 @@
         const data = event.data || {};
         el.appendChild(renderTitle([
           { text: `Step ${data.step || ""}`.trim(), className: "event-pill" },
-          { text: data.tool || "tool", className: "event-pill" },
+          { text: humanizeToolName(data.tool || "tool"), className: "event-pill" },
           { text: data.thought || event.content || "", className: "muted" },
         ]));
         if (data.tool_input !== undefined) {
-          el.appendChild(renderPre(data.tool_input));
+          el.appendChild(renderToolInput(data.tool_input));
         }
         return el;
       }
 
       const data = event.data || {};
       el.appendChild(renderTitle([
-        { text: data.tool || "observation", className: "event-pill" },
-        { text: data.truncated ? "truncated" : "", className: data.truncated ? "event-pill" : "muted" },
+        { text: `${humanizeToolName(data.tool || "observation")} returned evidence`, className: "event-pill" },
+        { text: data.truncated ? "preview" : "", className: data.truncated ? "event-pill" : "muted" },
       ]));
-      const message = document.createElement("div");
-      message.className = "event-message";
-      message.textContent = data.preview || event.content || "";
-      el.appendChild(message);
+      const envelope = parseToolEnvelope(data.raw || event.content || data.preview || "");
+      if (envelope) {
+        el.appendChild(renderToolEnvelope(envelope));
+      } else {
+        el.appendChild(
+          createExpandableText(data.raw || event.content || data.preview || "", {
+            limit: 420,
+            className: "event-message",
+          })
+        );
+      }
       return el;
     }
 
@@ -314,11 +1689,214 @@
       return title;
     }
 
+    function createExpandableText(text, options = {}) {
+      const fullText = typeof text === "string" ? text : String(text ?? "");
+      const limit = options.limit ?? 320;
+      const className = options.className || "tool-result-snippet";
+
+      if (fullText.length <= limit) {
+        const el = document.createElement("div");
+        el.className = className;
+        el.textContent = fullText;
+        return el;
+      }
+
+      const wrap = document.createElement("div");
+      wrap.className = "expandable-text";
+      const body = document.createElement("div");
+      body.className = className;
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "expandable-toggle";
+
+      let expanded = false;
+      const collapsed = fullText.slice(0, limit).trimEnd() + "...";
+
+      const sync = () => {
+        body.textContent = expanded ? fullText : collapsed;
+        toggle.textContent = expanded ? "Show less" : "Show more";
+      };
+
+      toggle.onclick = () => {
+        expanded = !expanded;
+        sync();
+      };
+
+      sync();
+      wrap.appendChild(body);
+      wrap.appendChild(toggle);
+      return wrap;
+    }
+
     function renderPre(value) {
       const pre = document.createElement("pre");
       pre.className = "event-pre";
-      pre.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
-      return pre;
+      const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+      if ((text || "").length <= 600) {
+        pre.textContent = text;
+        return pre;
+      }
+      const wrap = document.createElement("div");
+      wrap.className = "expandable-text";
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "expandable-toggle";
+      let expanded = false;
+      const collapsed = (text || "").slice(0, 600).trimEnd() + "...";
+      const sync = () => {
+        pre.textContent = expanded ? text : collapsed;
+        toggle.textContent = expanded ? "Show less" : "Show more";
+      };
+      toggle.onclick = () => {
+        expanded = !expanded;
+        sync();
+      };
+      sync();
+      wrap.appendChild(pre);
+      wrap.appendChild(toggle);
+      return wrap;
+    }
+
+    function renderToolInput(value) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return renderPre(value);
+      }
+      const wrap = document.createElement("div");
+      wrap.className = "tool-result-list";
+      const card = document.createElement("div");
+      card.className = "tool-result-card";
+      const title = document.createElement("div");
+      title.className = "tool-result-title";
+      title.textContent = "Inputs";
+      card.appendChild(title);
+
+      Object.entries(value)
+        .filter(([, v]) => v !== null && v !== "")
+        .forEach(([key, val]) => {
+          card.appendChild(
+            createExpandableText(`${humanizeFieldName(key)}: ${formatValueInline(val)}`, {
+              limit: 220,
+              className: "tool-result-snippet",
+            })
+          );
+        });
+      wrap.appendChild(card);
+      return wrap;
+    }
+
+    function renderMarkdown(markdown) {
+      if (window.marked && typeof window.marked.parse === "function") {
+        return window.marked.parse(markdown);
+      }
+
+      const escaped = escapeHtml(markdown);
+      const lines = escaped.split(/\r?\n/);
+      const html = [];
+      let inList = false;
+      let inCode = false;
+
+      for (const rawLine of lines) {
+        const line = rawLine.trimEnd();
+
+        if (line.startsWith("```")) {
+          if (inList) {
+            html.push("</ul>");
+            inList = false;
+          }
+          html.push(inCode ? "</code></pre>" : "<pre><code>");
+          inCode = !inCode;
+          continue;
+        }
+
+        if (inCode) {
+          html.push(line + "\n");
+          continue;
+        }
+
+        if (!line.trim()) {
+          if (inList) {
+            html.push("</ul>");
+            inList = false;
+          }
+          continue;
+        }
+
+        const bullet = line.match(/^\s*[-*]\s+(.+)$/);
+        if (bullet) {
+          if (!inList) {
+            html.push("<ul>");
+            inList = true;
+          }
+          html.push(`<li>${formatInlineMarkdown(bullet[1])}</li>`);
+          continue;
+        }
+
+        if (inList) {
+          html.push("</ul>");
+          inList = false;
+        }
+
+        const heading = line.match(/^(#{1,3})\s+(.+)$/);
+        if (heading) {
+          const level = heading[1].length;
+          html.push(`<h${level}>${formatInlineMarkdown(heading[2])}</h${level}>`);
+        } else {
+          html.push(`<p>${formatInlineMarkdown(line)}</p>`);
+        }
+      }
+
+      if (inCode) html.push("</code></pre>");
+      if (inList) html.push("</ul>");
+      return html.join("");
+    }
+
+    function renderTaskResultContent(content) {
+      const wrap = document.createElement("div");
+      const parsed = parseResearchArtifact(content);
+      if (!parsed) {
+        wrap.innerHTML = renderMarkdown(content);
+        return wrap;
+      }
+
+      const summaryCard = document.createElement("div");
+      summaryCard.className = "tool-result-card";
+      const title = document.createElement("div");
+      title.className = "tool-result-title";
+      title.textContent = "Task completed";
+      summaryCard.appendChild(title);
+
+      const note = document.createElement("div");
+      note.className = "tool-result-snippet";
+      const citationCount = Array.isArray(parsed.citations) ? parsed.citations.length : 0;
+      if (citationCount > 0) {
+        note.textContent = `This research track finished and collected ${citationCount} supporting source${citationCount === 1 ? "" : "s"}.`;
+      } else {
+        note.textContent = "This research track finished without collecting a new source list.";
+      }
+      summaryCard.appendChild(note);
+      wrap.appendChild(summaryCard);
+
+      if (Array.isArray(parsed.citations) && parsed.citations.length) {
+        const citations = document.createElement("div");
+        citations.innerHTML = renderCitationSummary(parsed.citations);
+        wrap.appendChild(citations);
+      }
+      return wrap;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function formatInlineMarkdown(value) {
+      return value
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>");
     }
 
     function renderErrorSummary(error, fallback) {
@@ -339,9 +1917,692 @@
       return wrap;
     }
 
+    function parseResearchArtifact(value) {
+      const text = String(value || "").trim();
+      if (!text.startsWith("{")) return null;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed === "object" && ("history" in parsed || "citations" in parsed)) {
+          return parsed;
+        }
+      } catch (_) {
+        return null;
+      }
+      return null;
+    }
+
+    function parseAgentTranscript(history) {
+      const text = String(history || "").trim();
+      if (!text) return [];
+      const marker = /^(USER|ASSISTANT|OBSERVATION):\s*/gm;
+      const starts = [];
+      let match;
+      while ((match = marker.exec(text)) !== null) {
+        starts.push({
+          role: match[1].toLowerCase(),
+          index: match.index,
+          contentStart: marker.lastIndex,
+        });
+      }
+
+      if (!starts.length) {
+        return [{ kind: "text", content: text }];
+      }
+
+      return starts.map((entry, index) => {
+        const end = index + 1 < starts.length ? starts[index + 1].index : text.length;
+        const raw = text.slice(entry.contentStart, end).trim();
+        return {
+          kind: entry.role,
+          raw,
+          parsed: parseTranscriptPayload(entry.role, raw),
+        };
+      });
+    }
+
+    function parseToolEnvelope(value) {
+      const text = String(value || "").trim();
+      if (!text || (!text.startsWith("{") && !text.startsWith("["))) return null;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed === "object" && "tool" in parsed && "ok" in parsed) {
+          return parsed;
+        }
+      } catch (_) {
+        return null;
+      }
+      return null;
+    }
+
+    function parseTranscriptPayload(kind, raw) {
+      const text = String(raw || "").trim();
+      if (!text) return null;
+
+      if ((text.startsWith("{") && text.endsWith("}")) || (text.startsWith("[") && text.endsWith("]"))) {
+        try {
+          return JSON.parse(text);
+        } catch (_) {
+          // fall through to compact parsers below
+        }
+      }
+
+      if (kind === "observation") {
+        return parseCompactObservationEnvelope(text);
+      }
+
+      return null;
+    }
+
+    function parseCompactObservationEnvelope(text) {
+      const source = String(text || "").trim();
+      if (!source.startsWith("tool=")) return null;
+
+      const toolMatch = source.match(/\btool=([^\s]+)/);
+      if (!toolMatch) return null;
+
+      const okMatch = source.match(/\bok=(true|false)\b/);
+      const envelope = {
+        tool: toolMatch[1],
+        ok: okMatch ? okMatch[1] === "true" : true,
+      };
+
+      const errorCodeMatch = source.match(/\berror_code=([^\s]+)/);
+      const errorMatch = source.match(/\berror=(.*)$/);
+      if (envelope.ok === false) {
+        envelope.error = {
+          code: errorCodeMatch ? errorCodeMatch[1] : "TOOL_ERROR",
+          message: errorMatch ? errorMatch[1].trim() : source,
+        };
+        return envelope;
+      }
+
+      const dataIndex = source.indexOf("data=");
+      if (dataIndex >= 0) {
+        const dataText = source.slice(dataIndex + 5).trim();
+        if ((dataText.startsWith("{") && dataText.endsWith("}")) || (dataText.startsWith("[") && dataText.endsWith("]"))) {
+          try {
+            envelope.data = JSON.parse(dataText);
+            return envelope;
+          } catch (_) {
+            // truncated previews fall through to text form
+          }
+        }
+        envelope.data = dataText;
+      }
+
+      return envelope;
+    }
+
+    function renderTranscriptArtifact(entries) {
+      const wrap = document.createElement("div");
+      wrap.className = "tool-result-list";
+      entries.forEach((entry, index) => {
+        if (entry.kind === "user") {
+          wrap.appendChild(renderTranscriptUserCard(entry.raw, index + 1));
+        } else if (entry.kind === "assistant") {
+          wrap.appendChild(renderTranscriptAssistantCard(entry, index + 1));
+        } else if (entry.kind === "observation") {
+          wrap.appendChild(renderTranscriptObservationCard(entry, index + 1));
+        } else {
+          const card = document.createElement("div");
+          card.className = "tool-result-card";
+          const title = document.createElement("div");
+          title.className = "tool-result-title";
+          title.textContent = `Research note ${index + 1}`;
+          card.appendChild(title);
+          card.appendChild(createExpandableText(entry.content || "", {
+            limit: 420,
+            className: "tool-result-snippet",
+          }));
+          wrap.appendChild(card);
+        }
+      });
+      return wrap;
+    }
+
+    function renderTranscriptUserCard(text, index) {
+      const card = document.createElement("div");
+      card.className = "tool-result-card";
+      const title = document.createElement("div");
+      title.className = "tool-result-title";
+      title.textContent = index === 1 ? "Research request" : `Research request ${index}`;
+      card.appendChild(title);
+      card.appendChild(createExpandableText(text, {
+        limit: 420,
+        className: "tool-result-snippet",
+      }));
+      return card;
+    }
+
+    function renderTranscriptAssistantCard(entry, index) {
+      const parsed = entry.parsed;
+      const card = document.createElement("div");
+      card.className = "tool-result-card";
+      const title = document.createElement("div");
+      title.className = "tool-result-title";
+
+      if (parsed && parsed.done) {
+        title.textContent = "Agent wrap-up";
+        card.appendChild(title);
+        if (parsed.thought) {
+          card.appendChild(createExpandableText(parsed.thought, {
+            limit: 360,
+            className: "tool-result-snippet",
+          }));
+        }
+        return card;
+      }
+
+      if (parsed && parsed.action) {
+        title.textContent = `Agent move ${index}: ${humanizeToolName(parsed.action)}`;
+        card.appendChild(title);
+        if (parsed.thought) {
+          const reason = document.createElement("div");
+          reason.className = "tool-result-meta";
+          reason.textContent = parsed.thought;
+          card.appendChild(reason);
+        }
+        if (parsed.action_input !== undefined) {
+          card.appendChild(renderToolInput(parsed.action_input));
+        }
+        return card;
+      }
+
+      title.textContent = `Agent note ${index}`;
+      card.appendChild(title);
+      card.appendChild(createExpandableText(entry.raw || "", {
+        limit: 420,
+        className: "tool-result-snippet",
+      }));
+      return card;
+    }
+
+    function renderTranscriptObservationCard(entry, index) {
+      const card = document.createElement("div");
+      card.className = "tool-result-card";
+      const title = document.createElement("div");
+      title.className = "tool-result-title";
+      const envelope = entry.parsed && entry.parsed.tool ? entry.parsed : parseToolEnvelope(entry.raw);
+
+      if (envelope) {
+        title.textContent = `Evidence ${index}: ${humanizeToolName(envelope.tool)}`;
+        card.appendChild(title);
+        const rendered = renderToolEnvelope(envelope);
+        if (rendered.childNodes.length === 1 && rendered.firstChild.classList && rendered.firstChild.classList.contains("tool-result-card")) {
+          const inner = rendered.firstChild;
+          Array.from(inner.childNodes).forEach((child) => card.appendChild(child.cloneNode(true)));
+        } else {
+          card.appendChild(rendered);
+        }
+        return card;
+      }
+
+      title.textContent = `Evidence ${index}`;
+      card.appendChild(title);
+      card.appendChild(createExpandableText(entry.raw || "", {
+        limit: 420,
+        className: "tool-result-snippet",
+      }));
+      return card;
+    }
+
+    function renderToolEnvelope(envelope) {
+      const wrap = document.createElement("div");
+      wrap.className = "tool-result-list";
+
+      if (!envelope.ok) {
+        wrap.appendChild(renderErrorSummary(envelope.error || { message: "Tool call failed" }, ""));
+        return wrap;
+      }
+
+      if (envelope.tool === "web_search" && Array.isArray(envelope.data)) {
+        envelope.data.slice(0, 5).forEach((item, index) => {
+          wrap.appendChild(renderSearchResultCard(item, index + 1));
+        });
+        return wrap;
+      }
+
+      if ((envelope.tool === "search_semantic_scholar" || envelope.tool === "search_arxiv") && Array.isArray(envelope.data)) {
+        envelope.data.slice(0, 5).forEach((item, index) => {
+          wrap.appendChild(renderPaperResultCard(envelope.tool, item, index + 1));
+        });
+        return wrap;
+      }
+
+      if (envelope.tool === "get_paper_content" && envelope.data && typeof envelope.data === "object") {
+        wrap.appendChild(renderPaperContentCard(envelope.data));
+        return wrap;
+      }
+
+      if (Array.isArray(envelope.data)) {
+        envelope.data.slice(0, 4).forEach((item, index) => {
+          const card = document.createElement("div");
+          card.className = "tool-result-card";
+          const title = document.createElement("div");
+          title.className = "tool-result-title";
+          title.textContent = `${humanizeToolName(envelope.tool)} result ${index + 1}`;
+          card.appendChild(title);
+          appendObjectSummary(card, item);
+          wrap.appendChild(card);
+        });
+        return wrap;
+      }
+
+      const card = document.createElement("div");
+      card.className = "tool-result-card";
+      const title = document.createElement("div");
+      title.className = "tool-result-title";
+      title.textContent = `${humanizeToolName(envelope.tool)} completed`;
+      card.appendChild(title);
+      appendObjectSummary(card, envelope.data);
+      wrap.appendChild(card);
+      return wrap;
+    }
+
+    function renderSearchResultCard(item, index) {
+      const card = document.createElement("div");
+      card.className = "tool-result-card";
+
+      const top = document.createElement("div");
+      top.className = "tool-result-top";
+      const title = document.createElement("div");
+      title.className = "tool-result-title";
+      title.textContent = `${index}. ${item.title || "Untitled source"}`;
+      top.appendChild(title);
+
+      card.appendChild(top);
+
+      const meta = document.createElement("div");
+      meta.className = "tool-result-meta";
+      const hostname = extractHostname(item.url);
+      if (hostname) {
+        const source = document.createElement("span");
+        source.textContent = hostname;
+        meta.appendChild(source);
+      }
+      if (item.credibility) {
+        const credibility = document.createElement("span");
+        credibility.textContent = `credibility: ${item.credibility}`;
+        meta.appendChild(credibility);
+      }
+      if (item.score !== undefined && item.score !== null && item.score !== "") {
+        const score = document.createElement("span");
+        score.textContent = `score: ${Number(item.score).toFixed(3)}`;
+        meta.appendChild(score);
+      }
+      if (meta.children.length) {
+        card.appendChild(meta);
+      }
+
+      if (item.url) {
+        const link = document.createElement("a");
+        link.className = "tool-result-url";
+        link.href = item.url;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = item.url;
+        card.appendChild(link);
+      }
+
+      if (item.content) {
+        card.appendChild(
+          createExpandableText(item.content, {
+            limit: 360,
+            className: "tool-result-snippet",
+          })
+        );
+      }
+
+      return card;
+    }
+
+    function renderPaperResultCard(toolName, item, index) {
+      const card = document.createElement("div");
+      card.className = "tool-result-card";
+
+      const title = document.createElement("div");
+      title.className = "tool-result-title";
+      title.textContent = `${index}. ${item.title || "Untitled paper"}`;
+      card.appendChild(title);
+
+      const meta = document.createElement("div");
+      meta.className = "tool-result-meta";
+      if (item.year) {
+        const year = document.createElement("span");
+        year.textContent = String(item.year);
+        meta.appendChild(year);
+      }
+      if (item.venue) {
+        const venue = document.createElement("span");
+        venue.textContent = item.venue;
+        meta.appendChild(venue);
+      }
+      if (item.citation_count !== undefined && item.citation_count !== null) {
+        const citations = document.createElement("span");
+        citations.textContent = `${item.citation_count} citations`;
+        meta.appendChild(citations);
+      }
+      if (item.source_quality) {
+        const quality = document.createElement("span");
+        quality.textContent = `source: ${item.source_quality}`;
+        meta.appendChild(quality);
+      }
+      if (meta.children.length) {
+        card.appendChild(meta);
+      }
+
+      if (item.arxiv_id) {
+        const idLine = document.createElement("div");
+        idLine.className = "tool-result-snippet";
+        idLine.textContent = `arXiv id: ${item.arxiv_id}`;
+        card.appendChild(idLine);
+      } else if (item.id && toolName === "search_arxiv") {
+        const idLine = document.createElement("div");
+        idLine.className = "tool-result-snippet";
+        idLine.textContent = `arXiv id: ${item.id}`;
+        card.appendChild(idLine);
+      }
+
+      if (item.abstract) {
+        card.appendChild(
+          createExpandableText(item.abstract, {
+            limit: 360,
+            className: "tool-result-snippet",
+          })
+        );
+      } else if (item.summary) {
+        card.appendChild(
+          createExpandableText(item.summary, {
+            limit: 360,
+            className: "tool-result-snippet",
+          })
+        );
+      }
+
+      if (item.pdf_url) {
+        const link = document.createElement("a");
+        link.className = "tool-result-url";
+        link.href = item.pdf_url;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = item.pdf_url;
+        card.appendChild(link);
+      }
+
+      return card;
+    }
+
+    function renderPaperContentCard(item) {
+      const card = document.createElement("div");
+      card.className = "tool-result-card";
+
+      const title = document.createElement("div");
+      title.className = "tool-result-title";
+      title.textContent = item.title || item.id || "Paper content";
+      card.appendChild(title);
+
+      const meta = document.createElement("div");
+      meta.className = "tool-result-meta";
+      if (item.id) {
+        const id = document.createElement("span");
+        id.textContent = `arXiv ${item.id}`;
+        meta.appendChild(id);
+      }
+      if (item.published) {
+        const published = document.createElement("span");
+        published.textContent = item.published;
+        meta.appendChild(published);
+      }
+      if (Array.isArray(item.authors) && item.authors.length) {
+        const authors = document.createElement("span");
+        authors.textContent = `${item.authors.slice(0, 3).join(", ")}${item.authors.length > 3 ? " +" + (item.authors.length - 3) : ""}`;
+        meta.appendChild(authors);
+      }
+      if (meta.children.length) {
+        card.appendChild(meta);
+      }
+
+      if (item.summary) {
+        card.appendChild(
+          createExpandableText(item.summary, {
+            limit: 420,
+            className: "tool-result-snippet",
+          })
+        );
+      } else if (item.content) {
+        card.appendChild(
+          createExpandableText(item.content, {
+            limit: 420,
+            className: "tool-result-snippet",
+          })
+        );
+      }
+
+      if (Array.isArray(item.keywords) && item.keywords.length) {
+        const keywords = document.createElement("div");
+        keywords.className = "tool-result-meta";
+        keywords.textContent = `keywords: ${item.keywords.slice(0, 8).join(", ")}`;
+        card.appendChild(keywords);
+      }
+
+      if (item.url) {
+        const link = document.createElement("a");
+        link.className = "tool-result-url";
+        link.href = item.url;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = item.url;
+        card.appendChild(link);
+      }
+
+      return card;
+    }
+
+    function renderCitationSummary(citations) {
+      const items = citations.slice(0, 8).map((citation, index) => {
+        const title = escapeHtml(citation.title || citation.key || `Source ${index + 1}`);
+        const key = citation.key ? ` <span style="color:#667085;">(${escapeHtml(citation.key)})</span>` : "";
+        return `<li>${title}${key}</li>`;
+      });
+      return `
+        <div class="tool-result-card" style="margin-top:12px;">
+          <div class="tool-result-title">Sources collected for this task</div>
+          <ul style="margin:8px 0 0 18px; padding:0; line-height:1.6;">
+            ${items.join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    function appendObjectSummary(card, value) {
+      if (typeof value === "string") {
+        card.appendChild(
+          createExpandableText(value, {
+            limit: 360,
+            className: "tool-result-snippet",
+          })
+        );
+        return;
+      }
+      if (!value || typeof value !== "object") {
+        card.appendChild(
+          createExpandableText(String(value), {
+            limit: 240,
+            className: "tool-result-snippet",
+          })
+        );
+        return;
+      }
+
+      const preferredKeys = ["title", "id", "published", "venue", "url", "summary", "abstract", "content", "authors", "keywords"];
+      const seen = new Set();
+      preferredKeys.forEach((key) => {
+        if (!(key in value)) return;
+        seen.add(key);
+        appendObjectField(card, key, value[key]);
+      });
+      Object.entries(value).forEach(([key, val]) => {
+        if (seen.has(key)) return;
+        appendObjectField(card, key, val);
+      });
+    }
+
+    function appendObjectField(card, key, val) {
+      if (val === null || val === undefined || val === "") return;
+      if (key === "url" && typeof val === "string") {
+        const link = document.createElement("a");
+        link.className = "tool-result-url";
+        link.href = val;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = val;
+        card.appendChild(link);
+        return;
+      }
+      card.appendChild(
+        createExpandableText(`${humanizeFieldName(key)}: ${formatValueInline(val)}`, {
+          limit: 320,
+          className: "tool-result-snippet",
+        })
+      );
+    }
+
+    function renderNodeNarrative(event) {
+      const data = event.data || {};
+      const node = data.node || "";
+      if (node === "plan_tasks" && Array.isArray(data.tasks)) {
+        return [
+          "<p>The planner created the following research tracks:</p>",
+          "<ul>",
+          ...data.tasks.map((task, index) => `<li><strong>Track ${index + 1}:</strong> ${escapeHtml(summarizeMission(task.mission || ""))}</li>`),
+          "</ul>",
+        ].join("");
+      }
+      if (node === "review_plan") {
+        return "<p>The system is waiting for you to approve or revise the research plan.</p>";
+      }
+      if (node === "collect_results") {
+        const histories = data.history_count ?? data.histories?.length ?? 0;
+        const citations = data.citation_count ?? data.citations?.length ?? 0;
+        return `<p>The system collected findings from <strong>${histories}</strong> research track${histories === 1 ? "" : "s"} and retained <strong>${citations}</strong> source${citations === 1 ? "" : "s"} for the answer.</p>`;
+      }
+      if (node === "synthesize_answer") {
+        return `<p>A draft answer was assembled from the current round of evidence and the saved source list.</p>${event.content ? renderMarkdown(event.content) : ""}`;
+      }
+      if (node === "critique_answer") {
+        if (data.ok) {
+          return "<p>The reviewer judged the current answer to be complete enough to share.</p>";
+        }
+        const gaps = Array.isArray(data.gaps) ? data.gaps : [];
+        return [
+          "<p>The reviewer requested another pass to close the following gaps:</p>",
+          gaps.length ? `<ul>${gaps.map(gap => `<li>${escapeHtml(gap)}</li>`).join("")}</ul>` : "",
+        ].join("");
+      }
+      if (node === "review_critique") {
+        return "<p>The system is waiting for your decision on whether to finish or continue researching.</p>";
+      }
+      if (node === "latest_checkpoint") {
+        return "<p>This checkpoint captures the latest durable state saved for the run.</p>";
+      }
+      if (event.content && !looksLikeJson(event.content)) {
+        return renderMarkdown(event.content);
+      }
+      return "<p>This step completed successfully.</p>";
+    }
+
+    function summarizeMission(text) {
+      return String(text || "").replace(/\s+/g, " ").trim();
+    }
+
+    function humanizeToolName(value) {
+      const name = String(value || "");
+      const labels = {
+        search_semantic_scholar: "Semantic Scholar search",
+        get_paper_content: "paper reader",
+        search_arxiv: "arXiv search",
+        web_search: "web search",
+        fetch_url: "web page reader",
+        get_repo_readme: "repository reader",
+        search_repos: "repository search",
+      };
+      return labels[name] || name.replaceAll("_", " ");
+    }
+
+    function markRunAsResuming(runId) {
+      if (!runId || !Array.isArray(latestRuns)) return;
+      latestRuns = latestRuns.map((run) => {
+        if (run.run_id !== runId) return run;
+        return {
+          ...run,
+          status: "running",
+          last_event_type: "resume",
+          updated_at: new Date().toISOString(),
+        };
+      });
+      renderSidebar(latestRuns);
+    }
+
+    function mergeLocalRunState(runs) {
+      if (!Array.isArray(runs)) return [];
+      if (!streamActive || !currentRunId) return runs;
+      return runs.map((run) => {
+        if (run.run_id !== currentRunId) return run;
+        if (["waiting_plan_review", "waiting_critique_review", "disconnected"].includes(run.status)) {
+          return {
+            ...run,
+            status: "running",
+            last_event_type: "resume",
+          };
+        }
+        return run;
+      });
+    }
+
+    function humanizeFieldName(value) {
+      return String(value || "").replaceAll("_", " ");
+    }
+
+    function extractHostname(url) {
+      try {
+        return new URL(url).hostname.replace(/^www\./, "");
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function formatValueInline(value) {
+      if (Array.isArray(value)) {
+        return value.map(item => formatValueInline(item)).join(", ");
+      }
+      if (value && typeof value === "object") {
+        if (value.name) return String(value.name);
+        if (value.title) return String(value.title);
+        return Object.entries(value)
+          .slice(0, 4)
+          .map(([k, v]) => `${humanizeFieldName(k)}: ${formatValueInline(v)}`)
+          .join("; ");
+      }
+      return String(value);
+    }
+
     document.getElementById("query").addEventListener("keydown", e => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit();
     });
+
+    document.getElementById("sidebar-tab-dashboard").addEventListener("click", () => {
+      sidebarView = "dashboard";
+      renderSidebar(latestRuns);
+    });
+    document.getElementById("sidebar-tab-history").addEventListener("click", () => {
+      sidebarView = "history";
+      renderSidebar(latestRuns);
+    });
+
+    window.addEventListener("pagehide", abortActiveRun);
+    window.addEventListener("beforeunload", abortActiveRun);
+
+    ensureGuest().then(loadHistory).catch(err => console.warn("guest init failed", err));
   </script>
 </body>
 </html>

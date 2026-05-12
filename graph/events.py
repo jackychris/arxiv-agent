@@ -1,10 +1,10 @@
-# orchestrator/events.py
+# graph/events.py
 from __future__ import annotations
 
 import json
 from typing import Any
 
-from orchestrator.errors import AgentError
+from graph.errors import AgentError
 from schemas import SSEEvent
 
 PLAN = "plan"
@@ -12,7 +12,10 @@ STEP = "step"
 OBSERVATION = "observation"
 TASK_RESULT = "task_result"
 TASK_DONE = "task_done"
+NODE_RESULT = "node_result"
 SYNTHESIZING = "synthesizing"
+CRITIQUE = "critique"
+HUMAN_REVIEW = "human_review"
 FINAL = "final"
 ERROR = "error"
 
@@ -39,8 +42,11 @@ def event(
     return SSEEvent(**payload).to_dict()
 
 
-def plan(tasks: list[dict], *, run_id: str) -> dict[str, Any]:
-    return event(PLAN, run_id=run_id, data={"tasks": tasks}, tasks=tasks)
+def plan(tasks: list[dict], *, run_id: str, round: int | None = None) -> dict[str, Any]:
+    data: dict[str, Any] = {"tasks": tasks}
+    if round is not None:
+        data["round"] = round
+    return event(PLAN, run_id=run_id, data=data, tasks=tasks)
 
 
 def step(
@@ -79,8 +85,53 @@ def task_done(task_id: str, *, run_id: str) -> dict[str, Any]:
     return event(TASK_DONE, run_id=run_id, task_id=task_id)
 
 
+def node_result(
+    node: str,
+    *,
+    run_id: str,
+    task_id: str | None = None,
+    content: str | None = None,
+    data: dict[str, Any] | None = None,
+    status: str = "done",
+) -> dict[str, Any]:
+    return event(
+        NODE_RESULT,
+        run_id=run_id,
+        task_id=task_id,
+        content=content,
+        data={"node": node, "status": status, **(data or {})},
+    )
+
+
 def synthesizing(*, run_id: str) -> dict[str, Any]:
     return event(SYNTHESIZING, run_id=run_id)
+
+
+def critique(ok: bool, gaps: list[str], *, run_id: str) -> dict[str, Any]:
+    content = "Answer is sufficient." if ok else f"{len(gaps)} gap(s) identified, launching follow-up research."
+    return event(CRITIQUE, run_id=run_id, content=content, data={"ok": ok, "gaps": gaps})
+
+
+def human_review(
+    stage: str,
+    prompt: str,
+    options: list[dict[str, Any]],
+    *,
+    run_id: str | None,
+    payload: dict[str, Any] | None = None,
+    interrupt_id: str | None = None,
+) -> dict[str, Any]:
+    return event(
+        HUMAN_REVIEW,
+        run_id=run_id,
+        content=prompt,
+        data={
+            "stage": stage,
+            "options": options,
+            "payload": payload or {},
+            "interrupt_id": interrupt_id,
+        },
+    )
 
 
 def final(content: str, *, run_id: str) -> dict[str, Any]:

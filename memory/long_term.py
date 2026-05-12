@@ -42,14 +42,20 @@ async def add(tool: str, reflection: str | dict) -> None:
     if not lesson or _is_stale(tool, lesson):
         return
     pool = await db_pool.get()
+    if pool is None:
+        return
     await db_memory.add(pool, tool, lesson)
 
 
 async def get(tool: str) -> list[str]:
     pool = await db_pool.get()
+    if pool is None:
+        return []
     return await db_memory.get(pool, tool)
 
 
 async def get_all() -> dict[str, list[str]]:
     pool = await db_pool.get()
+    if pool is None:
+        return {}
     return await db_memory.get_all(pool, _TOOLS)

@@ -35,14 +35,8 @@ class ResearchAgent:
 
         for step in range(MAX_STEPS):
             remaining = MAX_STEPS - step
-            if remaining == 1:
-                step_hint = (
-                    "1 step remaining. You must now give your final_answer. Do not call any tools."
-                )
-            elif remaining == 2:
-                step_hint = (
-                    "2 steps remaining. This is your last chance to call a tool. Use it wisely."
-                )
+            if remaining <= 2:
+                step_hint = f"{remaining} step(s) remaining. Output {{\"done\": true}} if you have enough information, otherwise use your last tool call."
             else:
                 step_hint = f"{remaining} steps remaining."
             temp = [*memory.get(), {"role": "system", "content": step_hint}]
@@ -58,11 +52,8 @@ class ResearchAgent:
                 print(f"\n--- Step {step + 1} ---")
                 print(f"Thought: {data.get('thought', '')}")
 
-            if "final_answer" in data:
-                if verbose:
-                    print(f"Final Answer: {data['final_answer']}")
-                await self._reflect(query, memory)
-                return data["final_answer"]
+            if data.get("done"):
+                break
 
             action: str = str(data.get("action") or "")
             action_input = data.get("action_input", {})
@@ -75,16 +66,8 @@ class ResearchAgent:
                 print(f"Observation: {observation[:200]}...")
             memory.add("user", f"Observation: {observation}")
 
-        memory.add(
-            "system",
-            "You have reached the maximum number of steps. Based on what you have found so far, give your best final_answer now. Do not call any tools.",
-        )
-        response = await llm.chat(memory.get())
         await self._reflect(query, memory)
-        data = parse_response(response)
-        if data and "final_answer" in data:
-            return f"[Max steps reached] {data['final_answer']}"
-        return response
+        return build_reflection_history(memory)
 
     async def _reflect(self, mission: str, memory: ShortTermMemory) -> None:
         history = build_reflection_history(memory)

@@ -4,19 +4,30 @@ import json
 import os
 from contextlib import AsyncExitStack
 
+import httpx
 import mcp.types as types
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.shared._httpx_utils import MCP_DEFAULT_SSE_READ_TIMEOUT
 
-from config import MCP_TOOL_TIMEOUT
+from config import ARXIV_MCP_URL, GITHUB_MCP_URL, MCP_TOOL_TIMEOUT, WEB_MCP_URL
 from runtime import tool_cache
 from schemas import ErrorEnvelope, ToolResultEnvelope
 
 
 def load_servers() -> dict:
     with open("mcp_config.json") as f:
-        return json.load(f)["servers"]
+        servers = json.load(f)["servers"]
+    env_overrides = {
+        "arxiv": ARXIV_MCP_URL,
+        "github": GITHUB_MCP_URL,
+        "web": WEB_MCP_URL,
+    }
+    for name, url in env_overrides.items():
+        if name in servers and url:
+            servers[name]["url"] = url
+    return servers
 
 
 def tool_result(
@@ -93,17 +104,40 @@ def _infer_error_code(tool: str, message: str) -> str:
     return "TOOL_ERROR"
 
 
+def _clean_tool_kwargs(kwargs: dict) -> dict:
+    cleaned = {}
+    for key, value in kwargs.items():
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        cleaned[key] = value
+    return cleaned
+
+
 class MCPClient:
-    def __init__(self):
+    def __init__(self, allowed_tools: set[str] | None = None):
         self._stack = AsyncExitStack()
         self._tool_to_session: dict[str, ClientSession] = {}
         self._tool_schemas: list[types.Tool] = []
+        self._allowed = allowed_tools
 
     async def __aenter__(self):
         for _, cfg in load_servers().items():
             if "url" in cfg:
+                timeout = httpx.Timeout(
+                    MCP_TOOL_TIMEOUT + 5.0,
+                    read=max(MCP_DEFAULT_SSE_READ_TIMEOUT, MCP_TOOL_TIMEOUT + 5.0),
+                )
+                http_client = await self._stack.enter_async_context(
+                    httpx.AsyncClient(
+                        trust_env=False,
+                        follow_redirects=True,
+                        timeout=timeout,
+                    )
+                )
                 read, write, _ = await self._stack.enter_async_context(
-                    streamable_http_client(cfg["url"])
+                    streamable_http_client(cfg["url"], http_client=http_client)
                 )
             else:
                 params = StdioServerParameters(
@@ -124,6 +158,12 @@ class MCPClient:
                     )
                 self._tool_to_session[tool.name] = session
                 self._tool_schemas.append(tool)
+
+        if self._allowed is not None:
+            self._tool_schemas = [t for t in self._tool_schemas if t.name in self._allowed]
+            self._tool_to_session = {
+                k: v for k, v in self._tool_to_session.items() if k in self._allowed
+            }
         return self
 
     async def __aexit__(self, *_):
@@ -153,6 +193,8 @@ class MCPClient:
                     recoverable=False,
                 )
             )
+
+        kwargs = _clean_tool_kwargs(kwargs)
 
         cached = tool_cache.get(name, kwargs)
         if cached is not None:

@@ -10,3 +10,5 @@ tavily-python
 a2a-sdk[http-server]
 protobuf<6
 httpx
+langgraph-checkpoint-postgres
+psycopg[binary]

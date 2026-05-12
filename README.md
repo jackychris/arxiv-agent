@@ -1,2 +1,7 @@
 # arxiv-agent
-agent for research
+
+Agent for research.
+
+## Docs
+
+- [Graph Pipeline](docs/graph.md)

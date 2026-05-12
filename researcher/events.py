@@ -27,7 +27,8 @@ def observation_status(
             "tool": tool,
             "preview": preview,
             "truncated": len(observation) > max_chars,
-            "content": preview,
+            "content": observation,
+            "raw": observation,
         },
         ensure_ascii=False,
     )

@@ -1,4 +1,4 @@
-# orchestrator/errors.py
+# graph/errors.py
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -32,7 +32,7 @@ class AgentError:
         return f"[{self.code.lower()}: {self.message}]"
 
 
-def no_result(source: str = "orchestrator") -> AgentError:
+def no_result(source: str = "graph") -> AgentError:
     return AgentError(
         code="NO_RESULT",
         message="task ended before producing a result",

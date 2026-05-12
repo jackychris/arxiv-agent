@@ -50,7 +50,10 @@ SSEType = Literal[
     "observation",
     "task_result",
     "task_done",
+    "node_result",
     "synthesizing",
+    "critique",
+    "human_review",
     "final",
     "error",
 ]
@@ -73,13 +76,18 @@ class SSEEvent(BaseModel):
 
 TraceKind = Literal[
     "run_start",
+    "query_rewritten",
     "plan_created",
-    "task_start",
+    "graph_task_start",
+    "agent_task_start",
     "agent_step",
     "tool_result",
-    "task_result",
-    "task_done",
+    "graph_task_result",
+    "agent_task_result",
+    "graph_task_done",
+    "agent_task_done",
     "synthesis_start",
+    "critique",
     "run_final",
     "run_error",
 ]

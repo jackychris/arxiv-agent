@@ -16,14 +16,107 @@ services:
       timeout: 5s
       retries: 5
 
-  arxiv-agent:
+  arxiv-mcp:
+    build: .
+    command: ["python", "-m", "tools.arxiv.server", "--http"]
+    env_file:
+      - .env
+    volumes:
+      - ./paper_content:/app/paper_content
+    expose:
+      - "8765"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8765/mcp/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  github-mcp:
+    build: .
+    command: ["python", "-m", "tools.github.server", "--http"]
+    env_file:
+      - .env
+    expose:
+      - "8767"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8767/mcp/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  web-mcp:
+    build: .
+    command: ["python", "-m", "tools.web.server", "--http"]
+    env_file:
+      - .env
+    expose:
+      - "8768"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8768/mcp/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  research-agent:
+    build: .
+    command: ["python", "-m", "researcher.server"]
+    env_file:
+      - .env
+    environment:
+      PORT_RESEARCH_AGENT: 8766
+      RESEARCH_AGENT_URL: http://research-agent:8766
+      ARXIV_MCP_URL: http://arxiv-mcp:8765/mcp/
+      GITHUB_MCP_URL: http://github-mcp:8767/mcp/
+      WEB_MCP_URL: http://web-mcp:8768/mcp/
+    depends_on:
+      arxiv-mcp:
+        condition: service_healthy
+      github-mcp:
+        condition: service_healthy
+      web-mcp:
+        condition: service_healthy
+    expose:
+      - "8766"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8766/.well-known/agent-card.json')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  app:
     build: .
     expose:
       - "8000"
     env_file:
       - .env
+    environment:
+      POSTGRES_HOST: postgres
+      ARXIV_MCP_HOST: arxiv-mcp
+      GITHUB_MCP_HOST: github-mcp
+      WEB_MCP_HOST: web-mcp
+      RESEARCH_AGENT_HOST: research-agent
+      ARXIV_MCP_URL: http://arxiv-mcp:8765/mcp/
+      GITHUB_MCP_URL: http://github-mcp:8767/mcp/
+      WEB_MCP_URL: http://web-mcp:8768/mcp/
+      RESEARCH_AGENT_URL: http://research-agent:8766
     depends_on:
       postgres:
+        condition: service_healthy
+      arxiv-mcp:
+        condition: service_healthy
+      github-mcp:
+        condition: service_healthy
+      web-mcp:
+        condition: service_healthy
+      research-agent:
         condition: service_healthy
     volumes:
       - ./runs:/app/runs
@@ -43,7 +136,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - arxiv-agent
+      - app
     restart: unless-stopped
 
 volumes:
