@@ -1,13 +1,63 @@
 {
   "servers": {
-    "arxiv": {
-      "url": "http://127.0.0.1:8765/mcp/"
+    "academic": {
+      "url": "http://127.0.0.1:8765/mcp",
+      "allowed_tools": [
+        "search_arxiv",
+        "search_semantic",
+        "search_openalex",
+        "search_crossref",
+        "get_crossref_paper_by_doi",
+        "search_dblp",
+        "download_arxiv",
+        "download_semantic",
+        "read_arxiv_paper",
+        "read_semantic_paper",
+        "read_openalex_paper",
+        "read_dblp_paper"
+      ]
     },
     "github": {
-      "url": "http://127.0.0.1:8767/mcp/"
+      "url": "http://127.0.0.1:8767/mcp/",
+      "allowed_tools": [
+        "search_repositories",
+        "search_code",
+        "get_file_contents"
+      ]
     },
     "web": {
-      "url": "http://127.0.0.1:8768/mcp/"
+      "url": "http://127.0.0.1:8768/mcp/",
+      "allowed_tools": [
+        "tavily_search",
+        "tavily_extract"
+      ],
+      "blocked_extract_domains": [
+        "google.com",
+        "google.com.hk",
+        "google.com.tw",
+        "googleapis.com",
+        "gstatic.com",
+        "googleusercontent.com",
+        "googlevideo.com",
+        "youtube.com",
+        "youtu.be",
+        "twitter.com",
+        "x.com",
+        "t.co",
+        "facebook.com",
+        "fbcdn.net",
+        "instagram.com",
+        "threads.net",
+        "whatsapp.com",
+        "telegram.org",
+        "t.me",
+        "medium.com",
+        "blogspot.com",
+        "blogger.com",
+        "reddit.com",
+        "wikipedia.org",
+        "wikimedia.org"
+      ]
     }
   }
 }

@@ -24,7 +24,7 @@ from config import (
 )
 from graph import errors as err
 from graph import events as evt
-from graph.synthesizer import strip_sources_section, synthesize
+from graph.synthesizer import strip_sources_section, synthesize_with_evaluation
 from graph.state import ResearchState, TaskState
 from prompts import (
     CONTINUE_GUIDANCE_PROMPT,
@@ -481,10 +481,11 @@ async def research_task(state: TaskState, config: RunnableConfig, writer: Stream
 
 async def collect_results(state: ResearchState, writer: StreamWriter) -> dict:
     tasks = state.get("tasks", [])
+    subagent_results = state.get("subagent_results", {})
     round_results = [
-        state["subagent_results"][task["id"]]
+        subagent_results[task["id"]]
         for task in tasks
-        if task.get("id") in state["subagent_results"]
+        if task.get("id") in subagent_results
     ]
     raw_results = [entry["result"] for entry in round_results]
     histories, citations = _parse_findings(raw_results)
@@ -534,13 +535,22 @@ async def synthesize_answer(state: ResearchState, writer: StreamWriter) -> dict:
     if state.get("current_answer"):
         prior_answer = strip_sources_section(state["current_answer"])
     run_citations = state.get("known_citations", [])
+    evidence_evaluation: dict = {}
+    draft_answer_preview = ""
+    critical_review: dict = {}
+    simple_evaluation: dict = {}
     try:
-        final = await synthesize(
+        synthesis = await synthesize_with_evaluation(
             state["rewritten_query"],
             synthesis_inputs,
             run_citations,
             prior_answer=prior_answer,
         )
+        final = synthesis.answer
+        evidence_evaluation = synthesis.evidence_evaluation
+        draft_answer_preview = _preview_text(synthesis.draft_answer, 500)
+        critical_review = synthesis.critical_review
+        simple_evaluation = synthesis.simple_evaluation
         logger.info("Synthesis model call finished", extra={"run_id": context_id, "round": state.get("round", 0), "answer_length": len(final)})
     except Exception:
         logger.warning("Synthesis failed, falling back to concatenation", exc_info=True)
@@ -567,6 +577,10 @@ async def synthesize_answer(state: ResearchState, writer: StreamWriter) -> dict:
                 "prior_answer_length": len(prior_answer or ""),
                 "citation_count": len(run_citations),
                 "citations": _summarize_citations(run_citations),
+                "evidence_evaluation": evidence_evaluation,
+                "draft_answer_preview": draft_answer_preview,
+                "critical_review": critical_review,
+                "simple_evaluation": simple_evaluation,
                 "current_answer_length": len(final),
                 "current_answer_preview": _preview_text(final, 300),
                 "round": state.get("round", 0),
@@ -754,7 +768,11 @@ async def review_critique(state: ResearchState, writer: StreamWriter) -> dict:
 
 def route_after_plan_review(state: ResearchState) -> str:
     action = state.get("plan_review_action") or "continue"
-    return "plan_tasks" if action in {"replan", "replan_with_feedback"} else "dispatch_tasks"
+    if action in {"replan", "replan_with_feedback"}:
+        return "plan_tasks"
+    if not state.get("tasks"):
+        return "collect_results"
+    return "dispatch_tasks"
 
 
 def route_after_critique(state: ResearchState) -> str:

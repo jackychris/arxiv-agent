@@ -1,0 +1,60 @@
+name: MCP Server Diff
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  mcp-diff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build UI
+        uses: ./.github/actions/build-ui
+
+      - name: Run MCP Server Diff
+        uses: SamMorrowDrums/mcp-server-diff@v2.3.5
+        with:
+          setup_go: "true"
+          install_command: go mod download
+          start_command: go run ./cmd/github-mcp-server stdio
+          env_vars: |
+            GITHUB_PERSONAL_ACCESS_TOKEN=test-token
+          configurations: |
+            [
+              {"name": "default", "args": ""},
+              {"name": "read-only", "args": "--read-only"},
+              {"name": "toolsets-repos", "args": "--toolsets=repos"},
+              {"name": "toolsets-issues", "args": "--toolsets=issues"},
+              {"name": "toolsets-context", "args": "--toolsets=context"},
+              {"name": "toolsets-pull_requests", "args": "--toolsets=pull_requests"},
+              {"name": "toolsets-repos,issues", "args": "--toolsets=repos,issues"},
+              {"name": "toolsets-issues,context", "args": "--toolsets=issues,context"},
+              {"name": "toolsets-all", "args": "--toolsets=all"},
+              {"name": "tools-get_me", "args": "--tools=get_me"},
+              {"name": "tools-get_me,list_issues", "args": "--tools=get_me,list_issues"},
+              {"name": "toolsets-repos+read-only", "args": "--toolsets=repos --read-only"}
+            ]
+
+      - name: Add interpretation note
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ **Note:** Differences may be intentional improvements." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Common expected differences:" >> $GITHUB_STEP_SUMMARY
+          echo "- New tools/toolsets added" >> $GITHUB_STEP_SUMMARY
+          echo "- Tool descriptions updated" >> $GITHUB_STEP_SUMMARY
+          echo "- Capability changes (intentional improvements)" >> $GITHUB_STEP_SUMMARY

@@ -22,6 +22,4 @@ stop_service() {
 
 stop_service "main"
 stop_service "research-agent"
-stop_service "web-mcp"
-stop_service "github-mcp"
-stop_service "arxiv-mcp"
+docker compose stop web-mcp github-mcp academic-mcp

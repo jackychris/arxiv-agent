@@ -16,48 +16,57 @@ services:
       timeout: 5s
       retries: 5
 
-  arxiv-mcp:
-    build: .
-    command: ["python", "-m", "tools.arxiv.server", "--http"]
-    env_file:
-      - .env
-    volumes:
-      - ./paper_content:/app/paper_content
+  academic-mcp:
+    build:
+      context: .
+      dockerfile: docker/mcp/academic/Dockerfile
+    environment:
+      PAPER_SEARCH_MCP_SEMANTIC_SCHOLAR_API_KEY: ${PAPER_SEARCH_MCP_SEMANTIC_SCHOLAR_API_KEY:-}
     expose:
       - "8765"
+    ports:
+      - "8765:8765"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1', 8765), 2); s.close()"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8765/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
 
   github-mcp:
-    build: .
-    command: ["python", "-m", "tools.github.server", "--http"]
-    env_file:
-      - .env
+    build:
+      context: .
+      dockerfile: docker/mcp/github/Dockerfile
+    environment:
+      GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+      GITHUB_TOOLS: ${GITHUB_TOOLS:-search_repositories,search_code,get_file_contents}
+      GITHUB_READ_ONLY: "1"
     expose:
       - "8767"
+    ports:
+      - "8767:8767"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1', 8767), 2); s.close()"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8767/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
 
   web-mcp:
-    build: .
-    command: ["python", "-m", "tools.web.server", "--http"]
-    env_file:
-      - .env
+    build:
+      context: .
+      dockerfile: docker/mcp/web/Dockerfile
+    environment:
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
     expose:
       - "8768"
+    ports:
+      - "8768:8768"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1', 8768), 2); s.close()"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8768/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -71,11 +80,11 @@ services:
     environment:
       PORT_RESEARCH_AGENT: 8766
       RESEARCH_AGENT_URL: http://research-agent:8766
-      ARXIV_MCP_URL: http://arxiv-mcp:8765/mcp/
+      ACADEMIC_MCP_URL: http://academic-mcp:8765/mcp
       GITHUB_MCP_URL: http://github-mcp:8767/mcp/
       WEB_MCP_URL: http://web-mcp:8768/mcp/
     depends_on:
-      arxiv-mcp:
+      academic-mcp:
         condition: service_healthy
       github-mcp:
         condition: service_healthy
@@ -99,18 +108,18 @@ services:
       - .env
     environment:
       POSTGRES_HOST: postgres
-      ARXIV_MCP_HOST: arxiv-mcp
+      ACADEMIC_MCP_HOST: academic-mcp
       GITHUB_MCP_HOST: github-mcp
       WEB_MCP_HOST: web-mcp
       RESEARCH_AGENT_HOST: research-agent
-      ARXIV_MCP_URL: http://arxiv-mcp:8765/mcp/
+      ACADEMIC_MCP_URL: http://academic-mcp:8765/mcp
       GITHUB_MCP_URL: http://github-mcp:8767/mcp/
       WEB_MCP_URL: http://web-mcp:8768/mcp/
       RESEARCH_AGENT_URL: http://research-agent:8766
     depends_on:
       postgres:
         condition: service_healthy
-      arxiv-mcp:
+      academic-mcp:
         condition: service_healthy
       github-mcp:
         condition: service_healthy

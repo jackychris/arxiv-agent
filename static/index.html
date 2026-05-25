@@ -866,7 +866,7 @@
       } else if (event.type === "synthesizing") {
         const notice = document.createElement("div");
         notice.className = "synth-notice";
-        notice.textContent = "Drafting a source-backed answer from the research findings...";
+        notice.textContent = "Evaluating evidence, drafting, reviewing, and finalizing a source-backed answer...";
         activity.appendChild(notice);
 
       } else if (event.type === "critique") {
@@ -1499,7 +1499,7 @@
         review_plan: "Plan review",
         research_task: "Research task",
         collect_results: "Evidence collected",
-        synthesize_answer: "Answer drafted",
+        synthesize_answer: "Answer self-review",
         critique_answer: "Quality review",
         review_critique: "Answer review",
         finalize: "Answer finalized",
@@ -2155,21 +2155,37 @@
         return wrap;
       }
 
-      if (envelope.tool === "web_search" && Array.isArray(envelope.data)) {
-        envelope.data.slice(0, 5).forEach((item, index) => {
+      if (envelope.tool === "tavily_search") {
+        if (typeof envelope.data === "string") {
+          const card = document.createElement("div");
+          card.className = "tool-result-card";
+          const title = document.createElement("div");
+          title.className = "tool-result-title";
+          title.textContent = "Web search results";
+          card.appendChild(title);
+          card.appendChild(createExpandableText(envelope.data, {
+            limit: 900,
+            className: "tool-result-snippet",
+          }));
+          wrap.appendChild(card);
+          return wrap;
+        }
+        const items = resultItems(envelope.data);
+        items.slice(0, 5).forEach((item, index) => {
           wrap.appendChild(renderSearchResultCard(item, index + 1));
         });
         return wrap;
       }
 
-      if ((envelope.tool === "search_semantic_scholar" || envelope.tool === "search_arxiv") && Array.isArray(envelope.data)) {
-        envelope.data.slice(0, 5).forEach((item, index) => {
+      if (isAcademicSearchTool(envelope.tool)) {
+        const items = resultItems(envelope.data);
+        items.slice(0, 5).forEach((item, index) => {
           wrap.appendChild(renderPaperResultCard(envelope.tool, item, index + 1));
         });
         return wrap;
       }
 
-      if (envelope.tool === "get_paper_content" && envelope.data && typeof envelope.data === "object") {
+      if (isAcademicReadTool(envelope.tool) && envelope.data && typeof envelope.data === "object") {
         wrap.appendChild(renderPaperContentCard(envelope.data));
         return wrap;
       }
@@ -2197,6 +2213,38 @@
       appendObjectSummary(card, envelope.data);
       wrap.appendChild(card);
       return wrap;
+    }
+
+    function resultItems(data) {
+      if (Array.isArray(data)) return data;
+      if (!data || typeof data !== "object") return [];
+      if (Array.isArray(data.results)) return data.results;
+      if (Array.isArray(data.result)) return data.result;
+      if (Array.isArray(data.items)) return data.items;
+      if (Array.isArray(data.data)) return data.data;
+      return [];
+    }
+
+    function isAcademicSearchTool(tool) {
+      return [
+        "search_semantic",
+        "search_arxiv",
+        "search_openalex",
+        "search_crossref",
+        "search_dblp",
+        "get_crossref_paper_by_doi",
+      ].includes(tool);
+    }
+
+    function isAcademicReadTool(tool) {
+      return [
+        "download_arxiv",
+        "download_semantic",
+        "read_arxiv_paper",
+        "read_semantic_paper",
+        "read_openalex_paper",
+        "read_dblp_paper",
+      ].includes(tool);
     }
 
     function renderSearchResultCard(item, index) {
@@ -2487,7 +2535,23 @@
         return `<p>The system collected findings from <strong>${histories}</strong> research track${histories === 1 ? "" : "s"} and retained <strong>${citations}</strong> source${citations === 1 ? "" : "s"} for the answer.</p>`;
       }
       if (node === "synthesize_answer") {
-        return `<p>A draft answer was assembled from the current round of evidence and the saved source list.</p>${event.content ? renderMarkdown(event.content) : ""}`;
+        const evaluation = data.evidence_evaluation || {};
+        const review = data.critical_review || {};
+        const answerability = evaluation.answerability ? escapeHtml(evaluation.answerability) : "recorded";
+        const reviewStatus = review.passes === false ? "requested fixes before finalization" : "passed or produced final guidance";
+        const weakPoints = Array.isArray(evaluation.weak_or_missing_points) ? evaluation.weak_or_missing_points.slice(0, 3) : [];
+        const mustFix = Array.isArray(review.must_fix) ? review.must_fix.slice(0, 3) : [];
+        const simpleEval = data.simple_evaluation || {};
+        const simpleScore = typeof simpleEval.score === "number" ? Math.round(simpleEval.score * 100) : null;
+        const simpleFlags = Array.isArray(simpleEval.flags) ? simpleEval.flags.slice(0, 4) : [];
+        return [
+          `<p>The system evaluated evidence first, drafted an answer, critically reviewed it, then generated the final response. Evidence strength: <strong>${answerability}</strong>; review ${escapeHtml(reviewStatus)}.</p>`,
+          simpleScore !== null ? `<p><strong>Simple quality score:</strong> ${simpleScore}/100${simpleEval.passed === false ? " (flagged)" : ""}</p>` : "",
+          simpleFlags.length ? `<p><strong>Quality flags:</strong></p><ul>${simpleFlags.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "",
+          weakPoints.length ? `<p><strong>Evidence gaps:</strong></p><ul>${weakPoints.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "",
+          mustFix.length ? `<p><strong>Draft fixes:</strong></p><ul>${mustFix.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "",
+          event.content ? renderMarkdown(event.content) : "",
+        ].join("");
       }
       if (node === "critique_answer") {
         if (data.ok) {
@@ -2516,17 +2580,7 @@
     }
 
     function humanizeToolName(value) {
-      const name = String(value || "");
-      const labels = {
-        search_semantic_scholar: "Semantic Scholar search",
-        get_paper_content: "paper reader",
-        search_arxiv: "arXiv search",
-        web_search: "web search",
-        fetch_url: "web page reader",
-        get_repo_readme: "repository reader",
-        search_repos: "repository search",
-      };
-      return labels[name] || name.replaceAll("_", " ");
+      return String(value || "");
     }
 
     function markRunAsResuming(runId) {

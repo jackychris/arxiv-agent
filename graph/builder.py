@@ -55,7 +55,11 @@ def build_graph() -> StateGraph:
     g.add_conditional_edges(
         "review_plan",
         route_after_plan_review,
-        {"plan_tasks": "plan_tasks", "dispatch_tasks": "dispatch_tasks"},
+        {
+            "plan_tasks": "plan_tasks",
+            "dispatch_tasks": "dispatch_tasks",
+            "collect_results": "collect_results",
+        },
     )
     g.add_conditional_edges("dispatch_tasks", dispatch_research_tasks, ["research_task"])
     g.add_edge("research_task", "collect_results")

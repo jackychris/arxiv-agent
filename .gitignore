@@ -219,6 +219,7 @@ __marimo__/
 
 # Project-specific
 runs/
+*.pptx
 *.log
 memory/long_term.json
 .vscode/
@@ -230,3 +231,9 @@ docs/
 nginx/.htpasswd
 paper_content/
 check_db.py
+ppt.py
+third_party/mcp/**/.venv/
+third_party/mcp/**/node_modules/
+third_party/mcp/**/build/
+third_party/mcp/**/dist/
+third_party/mcp/**/target/

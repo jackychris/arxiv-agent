@@ -29,9 +29,8 @@ start_service() {
   echo "$name started (pid $!)"
 }
 
-start_service "arxiv-mcp" "$PYTHON_BIN" -m tools.arxiv.server --http
-start_service "github-mcp" "$PYTHON_BIN" -m tools.github.server --http
-start_service "web-mcp" "$PYTHON_BIN" -m tools.web.server --http
+echo "Starting professional MCP services with Docker Compose..."
+docker compose up -d academic-mcp github-mcp web-mcp
 start_service "research-agent" "$PYTHON_BIN" -m researcher.server
 start_service "main" "$PYTHON_BIN" -m main
 

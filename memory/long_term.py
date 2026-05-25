@@ -5,23 +5,37 @@ from db import memory as db_memory
 from db import pool as db_pool
 
 _TOOLS = [
-    "search_semantic_scholar",
+    "search_semantic",
     "search_arxiv",
-    "get_paper_content",
-    "search_repos",
-    "get_repo_readme",
+    "search_openalex",
+    "search_crossref",
+    "get_crossref_paper_by_doi",
+    "search_dblp",
+    "download_arxiv",
+    "download_semantic",
+    "read_arxiv_paper",
+    "read_semantic_paper",
+    "read_openalex_paper",
+    "read_dblp_paper",
+    "search_repositories",
     "search_code",
-    "web_search",
-    "fetch_url",
+    "get_file_contents",
+    "tavily_search",
+    "tavily_extract",
     "orchestrator",
 ]
 
 _STALE_PATTERNS = {
-    "fetch_url": ["arxiv", "truncation", "truncated"],
-    "get_paper_content": [
-        "fetch the abstract directly via fetch_url",
+    "tavily_extract": ["arxiv", "truncation", "truncated"],
+    "read_arxiv_paper": [
+        "fetch the abstract directly via tavily_extract",
         "fetch the abstract page directly",
-        "fallback after fetch_url",
+        "fallback after tavily_extract",
+    ],
+    "read_semantic_paper": [
+        "fetch the abstract directly via tavily_extract",
+        "fetch the abstract page directly",
+        "fallback after tavily_extract",
     ],
 }
 

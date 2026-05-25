@@ -25,6 +25,7 @@ from runtime import trace
 logger = logging.getLogger(__name__)
 
 _STEPS_PREFIX_RE = re.compile(r"^\[steps=(\d+)\]\s*")
+_URL_RE = re.compile(r"https?://[^\s<>)\\\"']+")
 
 
 def _parse_mission(raw: str) -> tuple[int, str]:
@@ -37,10 +38,93 @@ def _parse_mission(raw: str) -> tuple[int, str]:
 
 _OBS_LIMIT_DEFAULT = 6000
 _OBS_LIMIT: dict[str, int] = {
-    "fetch_url": 10000,
-    "get_repo_readme": 10000,
-    "get_paper_detail": 10000,
+    "read_arxiv_paper": 12000,
+    "read_semantic_paper": 12000,
+    "read_openalex_paper": 12000,
+    "read_dblp_paper": 12000,
+    "download_arxiv": 12000,
+    "download_semantic": 12000,
+    "get_file_contents": 10000,
+    "tavily_extract": 10000,
 }
+
+
+def _iter_items(data) -> list[dict]:
+    if isinstance(data, list):
+        return [item for item in data if isinstance(item, dict)]
+    if not isinstance(data, dict):
+        return []
+    for key in ("results", "result", "papers", "items", "data"):
+        value = data.get(key)
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+    return [data]
+
+
+def _first_text(item: dict, keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = item.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _paper_citation(item: dict) -> dict | None:
+    title = _first_text(item, ("title", "name"))
+    doi = _first_text(item, ("doi", "DOI"))
+    if doi:
+        return {"key": f"doi:{doi.lower()}", "title": title[:100], "cited": False}
+    source = _first_text(item, ("source",)).lower()
+    url = _first_text(item, ("url", "pdf_url"))
+    arxiv_id = _first_text(item, ("arxiv_id", "arxivId", "arxiv", "id"))
+    if not arxiv_id and source == "arxiv":
+        arxiv_id = _first_text(item, ("paper_id", "id"))
+    if not arxiv_id and "arxiv.org/" in url:
+        arxiv_id = _first_text(item, ("paper_id", "id"))
+    if arxiv_id:
+        return {"key": f"arxiv:{arxiv_id}", "title": title[:100], "cited": False}
+    semantic_id = _first_text(item, ("paperId", "semantic_scholar_id"))
+    if not semantic_id and source in ("semantic", "semantic_scholar", "semanticscholar"):
+        semantic_id = _first_text(item, ("paper_id", "id"))
+    if semantic_id:
+        return {"key": f"semantic:{semantic_id}", "title": title[:100], "cited": False}
+    url = _first_text(item, ("url", "pdf_url", "openAccessPdf", "externalIds"))
+    if url:
+        return {"key": f"url:{url}", "title": title[:100] or url[:100], "cited": False}
+    return None
+
+
+def _github_citation(item: dict) -> dict | None:
+    repo = _first_text(item, ("full_name", "fullName", "nameWithOwner"))
+    repository = item.get("repository")
+    if not repo and isinstance(repository, dict):
+        repo = _first_text(repository, ("full_name", "fullName", "nameWithOwner"))
+    if repo:
+        path = _first_text(item, ("path", "file_path"))
+        key = f"github:{repo}:{path}" if path else f"github:{repo}"
+        return {"key": key, "title": path or repo, "cited": False}
+    url = _first_text(item, ("html_url", "url"))
+    if url and "github.com/" in url:
+        return {"key": f"url:{url}", "title": url[:100], "cited": False}
+    return None
+
+
+def _url_citations(data) -> list[dict]:
+    out = []
+    if isinstance(data, str):
+        seen = set()
+        for url in _URL_RE.findall(data):
+            url = url.rstrip(".,;:")
+            if url in seen:
+                continue
+            seen.add(url)
+            out.append({"key": f"url:{url}", "title": url[:100], "cited": False})
+        return out
+    for item in _iter_items(data):
+        url = _first_text(item, ("url", "raw_content_url"))
+        if url:
+            out.append({"key": f"url:{url}", "title": _first_text(item, ("title", "name"))[:100] or url[:100], "cited": False})
+    return out
 
 
 def _citations_from_observation(tool: str, observation: str) -> list[dict]:
@@ -55,44 +139,29 @@ def _citations_from_observation(tool: str, observation: str) -> list[dict]:
     if data is None:
         return []
 
-    if tool in ("search_semantic_scholar", "search_arxiv"):
-        items = data if isinstance(data, list) else []
-        out = []
-        for p in items[:5]:
-            if not isinstance(p, dict):
-                continue
-            if p.get("id"):
-                out.append({"key": f"arxiv:{p['id']}", "title": p.get("title", "")[:100], "cited": False})
-            elif p.get("arxiv_id"):
-                out.append({"key": f"arxiv:{p['arxiv_id']}", "title": p.get("title", "")[:100], "cited": False})
-            elif p.get("pdf_url"):
-                out.append({"key": f"url:{p['pdf_url']}", "title": p.get("title", "")[:100], "cited": False})
-        return out
+    if tool in (
+        "search_semantic",
+        "search_arxiv",
+        "search_openalex",
+        "search_crossref",
+        "get_crossref_paper_by_doi",
+        "search_dblp",
+        "download_arxiv",
+        "download_semantic",
+        "read_arxiv_paper",
+        "read_semantic_paper",
+        "read_openalex_paper",
+        "read_dblp_paper",
+    ):
+        citations = [_paper_citation(item) for item in _iter_items(data)]
+        return [citation for citation in citations[:5] if citation is not None]
 
-    if tool == "web_search":
-        items = data if isinstance(data, list) else []
-        out = []
-        for r in items[:5]:
-            if isinstance(r, dict) and r.get("url"):
-                out.append({"key": f"url:{r['url']}", "title": r.get("title", "")[:100], "cited": False})
-        return out
+    if tool in ("search_repositories", "search_code", "get_file_contents"):
+        citations = [_github_citation(item) for item in _iter_items(data)]
+        return [citation for citation in citations[:5] if citation is not None]
 
-    if tool == "get_paper_content" and isinstance(data, dict) and data.get("id"):
-        return [{"key": f"arxiv:{data['id']}", "title": data.get("title", "")[:100], "cited": False}]
-
-    if tool in ("search_repos", "search_code"):
-        items = data if isinstance(data, list) else []
-        return [
-            {"key": f"github:{r['full_name']}", "title": r.get("full_name", ""), "cited": False}
-            for r in items[:3]
-            if isinstance(r, dict) and r.get("full_name")
-        ]
-
-    if tool == "get_repo_readme" and isinstance(data, dict) and data.get("full_name"):
-        return [{"key": f"github:{data['full_name']}", "title": data.get("full_name", ""), "cited": False}]
-
-    if tool == "fetch_url" and isinstance(data, dict) and data.get("url"):
-        return [{"key": f"url:{data['url']}", "title": data.get("url", ""), "cited": False}]
+    if tool in ("tavily_search", "tavily_extract"):
+        return _url_citations(data)[:5]
 
     return []
 

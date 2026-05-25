@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS base
+FROM m.daocloud.io/docker.io/python:3.11-slim AS base
 
 WORKDIR /app
 

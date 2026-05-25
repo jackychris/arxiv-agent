@@ -24,12 +24,12 @@ import db
 from api.routes import router
 from config import (
     A2A_CLIENT_TIMEOUT,
-    ARXIV_MCP_HOST,
+    ACADEMIC_MCP_HOST,
     DATABASE_URL,
     DISABLE_DB,
     GITHUB_MCP_HOST,
     PORT_MAIN,
-    PORT_MCP,
+    PORT_ACADEMIC_MCP,
     PORT_GITHUB_MCP,
     PORT_RESEARCH_AGENT,
     PORT_WEB_MCP,
@@ -40,7 +40,7 @@ from config import (
 )
 from graph import build_graph
 DEPENDENCIES = (
-    ("arxiv MCP", ARXIV_MCP_HOST, PORT_MCP, None),
+    ("academic MCP", ACADEMIC_MCP_HOST, PORT_ACADEMIC_MCP, None),
     ("github MCP", GITHUB_MCP_HOST, PORT_GITHUB_MCP, None),
     ("web MCP", WEB_MCP_HOST, PORT_WEB_MCP, None),
     ("research agent", RESEARCH_AGENT_HOST, PORT_RESEARCH_AGENT, None),
