@@ -263,29 +263,3 @@ conda run -n research-agent python scripts/check_mcp_stack.py
 ```bash
 docker compose stop
 ```
-
-## 测试
-
-常用回归测试：
-
-```bash
-conda run -n research-agent python -m pytest tests/test_mcp_client.py tests/test_answer_evaluation.py tests/test_citations.py -q
-```
-
-静态编译检查：
-
-```bash
-conda run -n research-agent python -m compileall mcp_client.py graph/synthesizer.py graph/nodes.py rag
-```
-
-## Vendored MCP 升级
-
-Vendored 版本记录在 `third_party/mcp/VERSIONS.md`。
-
-升级步骤：
-
-1. 以固定 tag/commit 克隆 upstream 到临时目录。
-2. 删除 `.git`、依赖目录、构建产物、缓存和测试产物。
-3. 替换 `third_party/mcp/<name>/`。
-4. 更新 `third_party/mcp/VERSIONS.md`，记录来源 URL、commit/tag、拉取日期和 license。
-5. 重建 MCP 镜像并运行 `scripts/check_mcp_stack.py`。
