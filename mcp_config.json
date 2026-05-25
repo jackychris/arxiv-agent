@@ -31,7 +31,7 @@
         "tavily_search",
         "tavily_extract"
       ],
-      "blocked_extract_domains": [
+      "restricted_extract_domains": [
         "google.com",
         "google.com.hk",
         "google.com.tw",

@@ -150,7 +150,7 @@ MCP server 源码 vendored 在 `third_party/mcp/`，Docker 构建时只从本地
 
 - `tavily_search` 用于通用网页检索。
 - `tavily_extract` 用于非论文网页内容抽取。
-- `tavily_extract` 命中 GFW 常见屏蔽域名时会被 client 拦截，不发出实际 extract 请求。
+- `tavily_extract` 命中配置的受限域名时会被 client 拦截，不发出实际 extract 请求。
 - `tavily_extract` 如果目标 URL 是 `arxiv.org/abs/...`、`arxiv.org/pdf/...` 或 `export.arxiv.org/...`，会共享 arXiv limiter。
 
 ## 工具调用治理
@@ -164,7 +164,7 @@ MCP server 源码 vendored 在 `third_party/mcp/`，Docker 构建时只从本地
 - **缓存**：只缓存非空成功结果，避免空搜索结果污染后续运行。
 - **arXiv 限速**：`search_arxiv`、`download_arxiv`、`read_arxiv_paper` 强制使用全局 limiter，当前最小间隔为 5 秒。
 - **Tavily arXiv URL 限速**：`tavily_extract` 目标为 arXiv URL 时共享 arXiv limiter。
-- **Tavily 域名黑名单**：`tavily_extract` 命中配置的 blocked domains 时直接返回不可恢复工具错误，避免浪费调用。
+- **Tavily 受限域名拦截**：`tavily_extract` 命中配置的 restricted domains 时直接返回不可恢复工具错误，避免浪费调用。
 
 ## 答案生成链路
 
@@ -289,10 +289,3 @@ Vendored 版本记录在 `third_party/mcp/VERSIONS.md`。
 3. 替换 `third_party/mcp/<name>/`。
 4. 更新 `third_party/mcp/VERSIONS.md`，记录来源 URL、commit/tag、拉取日期和 license。
 5. 重建 MCP 镜像并运行 `scripts/check_mcp_stack.py`。
-
-## 相关文档
-
-- [图流程文档](docs/graph.md)
-- [展示说明](docs/showcase.md)
-- [展示说明（中文）](docs/showcase-cn.md)
-- [RAG 上下文组装与提示工程计划](RAG_CONTEXT_PROMPT_PLAN.md)

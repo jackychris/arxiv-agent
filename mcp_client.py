@@ -28,7 +28,7 @@ from utils import AsyncRateLimiter
 logger = logging.getLogger(__name__)
 
 _ARXIV_MCP_TOOLS = {"search_arxiv", "download_arxiv", "read_arxiv_paper"}
-_DEFAULT_TAVILY_EXTRACT_BLOCKED_DOMAINS = {
+_DEFAULT_TAVILY_EXTRACT_RESTRICTED_DOMAINS = {
     "blogger.com",
     "blogspot.com",
     "facebook.com",
@@ -204,8 +204,8 @@ def _host_from_url(url: str) -> str:
     return _normalize_domain(parsed.hostname or "")
 
 
-def _domain_matches(host: str, blocked_domain: str) -> bool:
-    domain = _normalize_domain(blocked_domain)
+def _domain_matches(host: str, restricted_domain: str) -> bool:
+    domain = _normalize_domain(restricted_domain)
     return host == domain or host.endswith(f".{domain}")
 
 
@@ -220,19 +220,26 @@ def _extract_tavily_urls(kwargs: dict) -> list[str]:
     return urls
 
 
-def _blocked_extract_target(
+def _restricted_extract_target(
     kwargs: dict,
-    blocked_domains: set[str] | list[str] | tuple[str, ...],
+    restricted_domains: set[str] | list[str] | tuple[str, ...],
 ) -> tuple[str, str] | None:
-    blocked = {_normalize_domain(str(domain)) for domain in blocked_domains if str(domain).strip()}
+    restricted = {
+        _normalize_domain(str(domain))
+        for domain in restricted_domains
+        if str(domain).strip()
+    }
     for url in _extract_tavily_urls(kwargs):
         host = _host_from_url(url)
         if not host:
             continue
-        for domain in blocked:
+        for domain in restricted:
             if _domain_matches(host, domain):
                 return url, domain
     return None
+
+
+_blocked_extract_target = _restricted_extract_target
 
 
 def _is_arxiv_extract_url(url: str) -> bool:
@@ -311,7 +318,10 @@ class MCPClient:
                     self._tool_to_session[tool.name] = session
                     self._tool_schemas.append(tool)
                     self._tool_policies[tool.name] = {
-                        "blocked_extract_domains": cfg.get("blocked_extract_domains", [])
+                        "restricted_extract_domains": cfg.get(
+                            "restricted_extract_domains",
+                            cfg.get("blocked_extract_domains", []),
+                        )
                     }
 
             if self._allowed is not None:
@@ -386,22 +396,22 @@ class MCPClient:
 
     async def _call_tool_once(self, name: str, session: ClientSession, kwargs: dict) -> dict:
         if name == "tavily_extract":
-            blocked_domains = set(_DEFAULT_TAVILY_EXTRACT_BLOCKED_DOMAINS)
-            blocked_domains.update(
-                self._tool_policies.get(name, {}).get("blocked_extract_domains") or []
+            restricted_domains = set(_DEFAULT_TAVILY_EXTRACT_RESTRICTED_DOMAINS)
+            restricted_domains.update(
+                self._tool_policies.get(name, {}).get("restricted_extract_domains") or []
             )
-            blocked = _blocked_extract_target(kwargs, blocked_domains)
-            if blocked:
-                url, domain = blocked
+            restricted = _restricted_extract_target(kwargs, restricted_domains)
+            if restricted:
+                url, domain = restricted
                 return tool_error(
                     name,
-                    "BLOCKED_EXTRACT_DOMAIN",
+                    "RESTRICTED_EXTRACT_DOMAIN",
                     (
-                        f"Refusing to extract {url!r}: domain matches blocked domain "
-                        f"{domain!r}. Use another source or a non-blocked mirror/page."
+                        f"Refusing to extract {url!r}: domain matches restricted domain "
+                        f"{domain!r}. Use another source or a stable mirror/page."
                     ),
                     recoverable=False,
-                    details={"url": url, "blocked_domain": domain},
+                    details={"url": url, "restricted_domain": domain},
                 )
 
         try:
